@@ -19,14 +19,31 @@ from groq import Groq
 from pydantic import BaseModel, ValidationError
 
 
+def _strictify(node):
+    """Groq/OpenAI strict json_schema requires every object to set
+    additionalProperties:false and list all its properties in `required`."""
+    if isinstance(node, dict):
+        props = node.get("properties")
+        if props is not None:
+            node["additionalProperties"] = False
+            node["required"] = list(props.keys())
+        for v in node.values():
+            _strictify(v)
+    elif isinstance(node, list):
+        for v in node:
+            _strictify(v)
+    return node
+
+
 class BaseAdapter:
     model_id: str
 
     def __init__(self, client: Groq):
         self.client = client
 
-    def _schema(self, model: Type[BaseModel]) -> dict:
-        return model.model_json_schema()
+    def _schema(self, model: Type[BaseModel], strict: bool = False) -> dict:
+        schema = model.model_json_schema()
+        return _strictify(schema) if strict else schema
 
     def complete(self, system: str, user: str, schema_model: Type[BaseModel]):
         raise NotImplementedError
@@ -44,7 +61,7 @@ class GptOssAdapter(BaseAdapter):
             response_format={
                 "type": "json_schema",
                 "json_schema": {"name": schema_model.__name__, "strict": True,
-                                "schema": self._schema(schema_model)},
+                                "schema": self._schema(schema_model, strict=True)},
             },
         )
         headers = resp.headers

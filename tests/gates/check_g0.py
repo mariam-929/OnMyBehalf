@@ -21,6 +21,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+# Windows consoles default to cp1252 and crash on Arabic; force UTF-8 for stdout/stderr.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv(ROOT / ".env")
