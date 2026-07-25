@@ -20,10 +20,16 @@ relabeled unchanged/changed/unverified (A08); gold oracle separated from verific
 **Third review (N1–N6) verdict = START CODING** (0 architectural blockers; prior fixes verified
 real). N1–N6 folded (LiveLookupResult + newer_version_available reason; composer few-shot fixed to
 never invent durations; IntentResult/ResearchPlan added to schema; per-doc freshness made a
-deterministic system step; PROGRESS stale refs fixed). **Still no code, by choice — plan is now
-green.** Owners assigned (table below); Groq key created. **Next action: scaffold the repo
-(.gitignore first) → Mariam puts key in `.env` → run G0 (env + per-model bakeoff + synthetic
-fixtures).** Deadline Wed 2026-07-29 (written).
+deterministic system step; PROGRESS stale refs fixed). Owners assigned (table below); Groq key
+created.
+
+**Update 2026-07-25 (later — build has started):** Repo scaffolded and public. **G0 AUTO PASS**
+(gpt-oss-120b; pending Maria's Arabic sign-off). **G1 AUTO PASS** — `data/catalog.json` enumerated,
+195+24+30 = **249 exact**, denominators captured to `report/evidence/coverage.md` (pending Gaby's
+5-URL check). Second dev env (Ali) up on Python 3.13. Known gotcha: **Dawlati Cloudflare 403s VPN
+IPs** — see Findings. **Next action: DATA track — admin-ajax probe (1 h box) → 10-page spike +
+`data/spike_gold.json` → field-recall scoring → G2**; BUILD track (graph skeleton on synthetic
+fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 
 ## Gate record (AUTHORITATIVE — defs in `VERIFICATION.md` v3; no step starts before upstream gates
 ## PASS; Claude runs auto checks but may NOT fill "Human sign-off")
@@ -31,7 +37,7 @@ fixtures).** Deadline Wed 2026-07-29 (written).
 | Gate | What | Status | Date | Evidence | Human sign-off |
 |---|---|---|---|---|---|
 | G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic |
-| G1 | Service catalog (249 posts) | NOT RUN | — | — | — |
+| G1 | Service catalog (249 posts) | AUTO PASS | 2026-07-25 | data/catalog.json — 195+24+30=249 exact, 0 dup ids, all modified_gmt | **PENDING: Gaby** opens 5 URLs |
 | G1b | Contact catalog (/en/directory crawl) | NOT RUN | — | — | — |
 | G2 | Corpus quality (spike-gated, multi-field) | NOT RUN | — | — | — |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
@@ -49,6 +55,14 @@ fixtures).** Deadline Wed 2026-07-29 (written).
   bakeoff output (all 5 classified correctly: 4 service_query + 1 invalid_request for the
   injection). Confirm the model handles Arabic correctly and bless `openai/gpt-oss-120b` as the
   winner. Then G0 is fully signed off. (Auto part already PASS.)
+- **G1 — Gaby:** open these 5 catalog URLs in a browser; confirm each loads and its Arabic title
+  matches `data/catalog.json`. Then G1 is fully signed off. (Auto part already PASS.)
+  1. `/ministry_service_ser/…` إصدار شهادات صحية لتصدير الحيوانات أو المشتقات الحيوانية
+  2. `/en/useful-numbers-post/ogero/` Ogero
+  3. `/ministry_service_ser/…` رخصة رعي في الغابات
+  4. `/ministry_service_ser/…` إعطاء رخصة صيد الأسماك البحرية (بواسطة مركب)
+  5. `/ministry_service_ser/…` تصحيح أو إضافة اسم على لوائح الشطب
+  (full URLs in `report/evidence/coverage.md`) — **VPN must be OFF, see Findings.**
 
 ## Owners (team: Gaby, Mariam, Ali, Ghina, Maria; procedure/Arabic experts = Maria + Ghina)
 Gate task owner + independent reviewer (reviewer ≠ producer). Adjust freely — these are proposed
@@ -84,7 +98,8 @@ unless a member picks one up.
 - [x] venv (outside OneDrive) + deps installed + Playwright chromium
 
 ### DATA track (Jul 26)
-- [ ] `enumerate.py` → `data/catalog.json` (249: 195+24+30) → G1 — Owner: __
+- [x] `enumerate.py` → `data/catalog.json` (249: 195+24+30 — **exact**) → G1 AUTO PASS — Owner: **Ali**
+      (pending Gaby's 5-URL human check)
 - [ ] admin-ajax probe (1 h box) → DECISION under Decisions — Owner: __
 - [ ] 10-page spike + field-recall scoring → G2 spike gate (≥80% or 40-core fallback) — Owner: __
 - [ ] full crawl → `extract.py` → `data/corpus/*.json` — Owner: __
@@ -119,7 +134,7 @@ unless a member picks one up.
 | Report/demo claim | Artifact needed | Capture moment | Path | Captured? |
 |---|---|---|---|---|
 | Model decision | bakeoff numbers table | G0 | report/evidence/bakeoff.md | [ ] |
-| Coverage denominators | catalog/fetched/extracted/verified counts | G1–G3 | report/evidence/coverage.md | [ ] |
+| Coverage denominators | catalog/fetched/extracted/verified counts | G1–G3 | report/evidence/coverage.md | [~] catalog=249 captured at G1; fetched/extracted/verified pending G2–G3 |
 | Retrieval quality | G4 gold results + θ values | G4 | report/evidence/retrieval.md | [ ] |
 | Agent loop / 2 ext calls | trace excerpt (JSONL) | G6 | report/evidence/trace_normal.json | [ ] |
 | 3 prompt iterations | ITERATION_LOG diffs | Jul 27–28 | prompts/ITERATION_LOG.md | [ ] |
@@ -145,7 +160,14 @@ unless a member picks one up.
 
 ## Findings / surprises
 
-- (none from implementation yet — the F01 model retirement was caught by review, pre-code)
+- **2026-07-25 — Dawlati Cloudflare 403s VPN/datacenter IPs (Ali, env setup).** Every dawlati.gov.lb
+  path — REST endpoints AND the plain homepage — returned `403 / server: cloudflare` ("Attention
+  Required!") from `requests`, `curl`, and real headless Chromium alike, while other sites (incl.
+  other Cloudflare-fronted ones) returned 200. Cause was a **VPN connection**, not the User-Agent,
+  the code, or the network. VPN off → 200 on all three post types immediately. **If any Dawlati call
+   403s, check the VPN before debugging the code.** (The browser-UA header in `enumerate.py` is still
+  required — Cloudflare also 403s default clients — so both conditions must hold.)
+- (nothing else from implementation yet — the F01 model retirement was caught by review, pre-code)
 
 ## Blockers
 
@@ -157,6 +179,16 @@ unless a member picks one up.
 
 ## Session log (newest first)
 
+- **2026-07-25 (Ali — env setup + G1 catalog):** Second dev environment stood up (venv
+  `~/venvs/OnMyBehalf` on **Python 3.13**, outside OneDrive; 3.14 is too new for chromadb/torch
+  wheels and the 3.10 on PATH is the Store build). All deps + Playwright chromium installed; imports
+  and `agents.models`/`agents.adapters` clean; `check_g0.py` runs and stops correctly at the missing
+  key (key not yet copied from Mariam — not a blocker for the DATA track). **Hit a hard Cloudflare
+  403 on every Dawlati path — cause was a VPN connection, not code/UA (logged under Findings).**
+  VPN off → **G1 run: `enumerate.py` → `data/catalog.json`, 195+24+30 = 249 exact**, 0 dup ids, all
+  rows carry modified_gmt/title/https url → **G1 AUTO PASS**; denominators captured to
+  `report/evidence/coverage.md`. Pending human: Gaby opens the 5 sampled URLs.
+  **Next: admin-ajax probe (1 h box) → 10-page spike + `data/spike_gold.json` → G2.**
 - **2026-07-25 (env setup + G0 bakeoff):** Repo scaffolded + pushed (public: github.com/mariam-929/
   OnMyBehalf); plan moved into repo `docs/` + CONTRIBUTING/SETUP/CLAUDE. Env installed outside
   OneDrive (venv + all deps + Playwright chromium; all imports OK). Groq key wired into `.env`
