@@ -21,6 +21,7 @@ except Exception:
     pass
 
 EXPECTED = {"ministry_service_ser": 195, "services": 24, "useful-numbers-post": 30}
+SAMPLE_SEED = 7  # matches the 5 URLs recorded in report/evidence/coverage.md
 
 
 def main():
@@ -46,9 +47,11 @@ def main():
     for k, v in checks.items():
         print(f"  [{'PASS' if v else 'FAIL'}] {k}")
     print(f"\nAUTO GATE: {'PASS' if ok else 'FAIL'}  (total {len(c)})")
-    print("\nHUMAN CHECK — open these 5 random URLs in a browser; confirm each is a real service")
-    print("page whose title matches the catalog (reviewer: Ali/Gaby):")
-    for r in random.sample(c, 5):
+    # Seeded so the sample is REPRODUCIBLE: the reviewer's 5 URLs must be the same 5 recorded in
+    # report/evidence/coverage.md, or the sign-off can't be re-verified or cited in the report.
+    print("\nHUMAN CHECK — open these 5 URLs in a browser; confirm each is a real service")
+    print("page whose title matches the catalog (reviewer: Mariam — producer is Ali):")
+    for r in random.Random(SAMPLE_SEED).sample(c, 5):
         print(f"  - {r['title_ar'][:40]}  ->  {r['url']}")
     sys.exit(0 if ok else 2)
 
