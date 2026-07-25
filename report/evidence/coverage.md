@@ -31,7 +31,8 @@ Run: python tools/crawler/enumerate.py -> data/catalog.json
 ministry_term present on 195/249 rows (only ministry_service_ser carries it) - informational,
 not a gate criterion.
 
-**G1 AUTO: PASS.** Human sign-off pending: Gaby opens the 5 sampled URLs below.
+**G1 AUTO: PASS.** Human sign-off pending: **Mariam** opens the 5 sampled URLs below
+(reviewer reassigned from Gaby 2026-07-25; reviewer != producer still holds).
 
 ## Human-check sample (5 random rows, seed 7)
 
