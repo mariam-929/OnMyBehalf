@@ -27,12 +27,24 @@ Rules (v2 + additions):
 - Human: 3 contacts checked against the live directory. Reviewer: __
 - (If coverage <60%: contacts stay best-effort; answer valid without them — not a blocker.)
 
-### G2 — Corpus quality (spike-gated, multi-field A13)
-- Auto (spike FIRST): `data/spike_gold.json` exists (10 pages, per-field annotations); recall
-  ≥80% on required_documents AND ≥70% on fees/authority/location/time vs spike_gold. Full: fetched
-  ≥200/219; extracted_ok ≥150; failures <10%; every record has modified_gmt_at_crawl + canonical
-  content_hash.
-- Human: 3 core diffed field-by-field vs live; 7 skimmed. Reviewer: __
+### G2 — Corpus quality (REFRAMED by PR #1 — ajax-ingested, not page-crawled; A13)
+**Reframe:** the service DETAIL pages are empty (verified — a rendered page is ~430 chars of
+chrome). There is NO page crawl and NO 10-page render spike / 40-core fallback. The corpus comes
+structured from the services-directory admin-ajax endpoint
+(`tools/crawler/fetch_service_directory.py`). The risk shifted from "can we render the page" to
+"is the extraction / document-splitting correct" — **fill-rate ≠ correctness.** Coverage is a
+source property: only 3 of 22 ministries are populated (Dawlati is adding them incrementally);
+report 4 denominators, never present 195 as national coverage.
+- Auto (`check_g2.py`): `data/corpus/*.json` exist; all Pydantic-valid; **#files == #distinct
+  post_ids** (ingester fails loud otherwise); ≥150 complete (required_documents non-empty —
+  currently 180/193); every record has modified_gmt_at_crawl + canonical content_hash; unmatched
+  ≤~5% (currently 2). Extraction correctness: `data/spike_gold.json` scored — machine docs vs
+  human-verified gold, recall ≥85% (PENDING until humans verify).
+- Human (Maria/Ghina; reviewer Ghina): open the live guide, diff **3 civil-registry core services
+  field-by-field** (e.g. 11464 بطاقة هوية, 11554 تسجيل ولادة) + skim 7; correct
+  `data/spike_gold.json` `gold_documents` and set `verified=true`, then re-run check_g2.
+  (Core-40 rebuilt around civil registry — passport/license do NOT exist; candidates in
+  `report/evidence/core40_candidates.md`.)
 
 ### G3 — Reference data + gold (A03,A24)
 - Auto: `core_verification.csv` 40 complete rows; **every lookup row used by core/demo source-checked

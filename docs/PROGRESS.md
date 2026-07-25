@@ -39,7 +39,7 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 | G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic (Mariam read them 2026-07-25, but she RAN the bakeoff — producer ≠ reviewer, so it does not close the gate) |
 | G1 | Service catalog (249 posts) | AUTO PASS | 2026-07-25 | data/catalog.json — 249 (195/24/30), 0 dup ids, all modified_gmt; `check_g1.py` 7/7; report/evidence/coverage.md | **PENDING: Mariam** opens 5 URLs |
 | G1b | Contact catalog (/en/directory crawl) | AUTO PASS | 2026-07-25 | 126 ContactRecords, all valid; coverage 3/3 corpus authorities (100%) + 21/22 taxonomy (95%) vs ≥60% gate; report/evidence/contacts_coverage.md | **PENDING: Ghina** checks 3 vs live |
-| G2 | Corpus quality (spike-gated, multi-field) | NOT RUN | — | — | — |
+| G2 | Corpus quality (REFRAMED: ajax, not crawl) | AUTO PASS (integrity) | 2026-07-25 | 193 corpus records generated, 180 complete, 0 overwrite, check_g2.py | **PENDING: Maria/Ghina** verify spike_gold + field-check 3 |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
 | G4 | Retrieval calibrated (top-1 + abstention) | NOT RUN | — | — | — |
 | G5 | Graph skeleton (BUILD track, fixtures) | NOT RUN | — | — | n/a |
@@ -51,6 +51,11 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 | G11 | Demo readiness (human-only) | NOT RUN | — | — | — |
 
 **Pending human checks queue:**
+- **G2 — Maria/Ghina (reviewer Ghina):** corpus generated (193 records, `check_g2.py` integrity
+  PASS). Extraction *correctness* still needs a human: open the live guide, diff **3 civil-registry
+  core services field-by-field** (11464 بطاقة هوية, 11554 تسجيل ولادة, + one more) + skim 7; in
+  `data/spike_gold.json` correct `gold_documents` and set `verified=true`, then re-run
+  `python tests/gates/check_g2.py` (target ≥85% recall). Closes G2. **VPN OFF.**
 - **G0 — Maria (STILL REQUIRED):** review the 5 Arabic inputs → intent classifications from
   `gpt-oss-120b` in the bakeoff output (all 5 classified correctly: 4 service_query +
   1 invalid_request for the injection). Confirm the model handles Arabic correctly and bless
@@ -186,6 +191,8 @@ unless a member picks one up.
 | 2026-07-25 | **Crawl the directory admin-ajax endpoint; do NOT crawl the 219 service pages** (admin-ajax probe, owner Ali, 1 h box) | The service pages are EMPTY: 0/249 posts have REST content, and a rendered page yields 431 chars of nav/title/footer with no section keywords and no content XHR. A page crawl would have produced 219 empty records and failed the G2 spike at ~0% recall. Content lives in `admin-ajax.php action=omsar_load_directory_ministry_services` (nonce from `var ajaxConfig`, not per-user → plain `requests` works), returning `required_documents_html` / `fees_html` / `notes_html` / `doc_url` per service. **181/195 (92.8%) have required documents; 136/195 (69.7%) have fees.** 22 POSTs ≈ 30 s replaces a 219-page Playwright crawl. Evidence: `report/evidence/ajax_probe.md` |
 | 2026-07-25 | **Core-40, gold cases and demo queries must be rebuilt from the 195 services that exist** | Only 3/22 ministries are populated (agriculture 115, interior 53, culture 27) — Dawlati's own notice says it is still adding documents. Planned core services **passport renewal and driving licence do not exist** (the only «جواز سفر» hit is a horse passport). `gold_claims.seed.json:normal_passport_en` and the SCOPE §9 demo query are unanswerable as written. Civil-registry services (هوية، تسجيل ولادة/زواج/وفاة، بيان قيد) DO exist and are strong replacements |
 | 2026-07-25 | **MODEL_ID = openai/gpt-oss-120b** (G0 bakeoff winner; owner Mariam) | 10/10 schema-valid @0.55s p50 vs qwen3.6 9/10 @1.38s (1 json_validate_failed, Preview). GPT-OSS: strict schema, 2.5× faster, not Preview. Both 8K TPM. Also fixed adapter (strict `additionalProperties`) + UTF-8 console. |
+| 2026-07-25 | **Corpus generated (193 records); G2 reframed + `check_g2.py`; G2 integrity AUTO PASS** | Ran the ingester for real → 193 `data/corpus/*.json` (180 complete, 0 overwrite). G2 no longer a page-crawl spike (pages empty) — now extraction-correctness: `check_g2.py` integrity PASS, recall-vs-gold PENDING human. `data/spike_gold.json` pre-filled (8 svcs) for Maria/Ghina to verify. VERIFICATION G2 updated to ajax reality. |
+| 2026-07-25 | **Core-40 candidates drafted from the real corpus** → `report/evidence/core40_candidates.md` | 43 civil-registry services exist (بطاقة هوية 9 docs, تسجيل ولادة, personal-status set) + 52 interior/27 culture/101 agriculture complete. Grounds the Maria/Ghina rebuild (verify, not invent). Passport/license confirmed absent across all post types. |
 
 ## Findings / surprises
 
@@ -228,6 +235,14 @@ unless a member picks one up.
 
 ## Session log (newest first)
 
+- **2026-07-25 (corpus generation + G2 setup, after PR #1 merge):** Reviewed + verified Ali's PR
+  (independently reproduced 193 records). Generated the corpus for real → 193 `data/corpus/*.json`.
+  Reframed G2 (no page crawl; pages empty) → wrote `tests/gates/check_g2.py` (integrity PASS,
+  recall-vs-gold pending human) + pre-filled `data/spike_gold.json` (8 svcs) for verification.
+  Drafted grounded core-40 list → `report/evidence/core40_candidates.md` (43 civil-registry svcs;
+  passport/license confirmed absent). Updated VERIFICATION G2 + PROGRESS. **G0/G1/G1b/G2 all AUTO
+  PASS; each awaits its human sign-off (Maria / Mariam / Ghina / Maria+Ghina).** Next: Maria+Ghina
+  rebuild core-40 from candidates → G3; BUILD track G5 in parallel.
 - **2026-07-25 (Ali — G1b contacts):** `tools/crawler/fetch_directory.py` implemented →
   **126 ContactRecords, all Pydantic-valid**. **No Playwright needed** — the stub assumed the
   directory was client-rendered; both datasets are embedded in the page HTML (`var
