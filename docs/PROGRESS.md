@@ -38,7 +38,7 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 |---|---|---|---|---|---|
 | G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic (Mariam read them 2026-07-25, but she RAN the bakeoff — producer ≠ reviewer, so it does not close the gate) |
 | G1 | Service catalog (249 posts) | AUTO PASS | 2026-07-25 | data/catalog.json — 249 (195/24/30), 0 dup ids, all modified_gmt; `check_g1.py` 7/7; report/evidence/coverage.md | **PENDING: Mariam** opens 5 URLs |
-| G1b | Contact catalog (/en/directory crawl) | NOT RUN | — | — | — |
+| G1b | Contact catalog (/en/directory crawl) | AUTO PASS | 2026-07-25 | 126 ContactRecords, all valid; coverage 3/3 corpus authorities (100%) + 21/22 taxonomy (95%) vs ≥60% gate; report/evidence/contacts_coverage.md | **PENDING: Ghina** checks 3 vs live |
 | G2 | Corpus quality (spike-gated, multi-field) | NOT RUN | — | — | — |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
 | G4 | Retrieval calibrated (top-1 + abstention) | NOT RUN | — | — | — |
@@ -59,6 +59,10 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
   requires reviewer ≠ producer, and this check is specifically an Arabic-quality read (why the
   owners table names Maria, a designated Arabic expert). Her read is recorded as a producer
   self-check; the gate stays open until Maria signs. Not blocking any work in the meantime.
+- **G1b — Ghina:** open https://dawlati.gov.lb/en/directory/ and confirm 3 contact records against
+  the live page (the three ministries listed in `report/evidence/contacts_coverage.md`), and
+  spot-check any ministry card for a phone number — expected: **none exist**. Then G1b is fully
+  signed off. (Auto part already PASS.) **VPN must be OFF, see Findings.**
 - **G1 — Mariam:** open these 5 catalog URLs in a browser; confirm each loads and its Arabic title
   matches `data/catalog.json`. Then G1 is fully signed off. (Auto part already PASS.)
   1. `/ministry_service_ser/…` إصدار شهادات صحية لتصدير الحيوانات أو المشتقات الحيوانية
@@ -168,7 +172,7 @@ unless a member picks one up.
 | Competitor comparison | 5-query table | **G0/G1 (moved earlier — A25)** | report/evidence/competitor.md | [ ] |
 | Architecture diagram (A20) | final pipeline figure | Jul 28 | report/evidence/architecture.* | [ ] |
 | Appendix assembly (A20) | prompt appendix + raw eval logs + AI log collated | Jul 29 | report/appendix/ | [ ] |
-| Contact coverage (A27) | authorities-with-contact count | G1b | report/evidence/contacts_coverage.md | [ ] |
+| Contact coverage (A27) | authorities-with-contact count | G1b | report/evidence/contacts_coverage.md | [x] 126 records; 3/3 corpus authorities, 21/22 taxonomy; **no per-authority phones exist** |
 | Spike ground truth (A13) | per-field annotations, 10 pages | G2 | data/spike_gold.json | [ ] |
 
 ## Decisions made mid-implementation (append)
@@ -223,6 +227,20 @@ unless a member picks one up.
   assumed) — expected, not a blocker.
 
 ## Session log (newest first)
+
+- **2026-07-25 (Ali — G1b contacts):** `tools/crawler/fetch_directory.py` implemented →
+  **126 ContactRecords, all Pydantic-valid**. **No Playwright needed** — the stub assumed the
+  directory was client-rendered; both datasets are embedded in the page HTML (`var
+  directoryEntityData` for 26 ministries / 46 public institutions / 39 municipalities / 0
+  governorates, and `article.directory-number-card` for 15 hotlines). Bilingual join on
+  `official_domain`, not `key` — Polylang gives EN/AR translations different post ids.
+  **G1b AUTO PASS:** coverage 3/3 corpus authorities (100%) and 21/22 taxonomy terms (95%) vs the
+  ≥60% gate — both denominators reported since the core-40 no longer exists.
+  **Measured limitation: the directory publishes NO per-authority phone numbers** — only 15
+  national hotlines, belonging to no specific service. `ContactRecord.phones` is empty for every
+  ministry; addresses exist for 23. This is the source's limit, exactly the SCOPE §15 "contacts
+  thin" risk, and the agent must not be described as returning a phone number for a service.
+  Evidence: `report/evidence/contacts_coverage.md`. Pending human: **Ghina**, 3 vs live.
 
 - **2026-07-25 (Ali — admin-ajax probe, 1 h box, DECISION recorded):** The probe found the plan's
   crawl target is empty and the real corpus is somewhere else. **0 of 249 posts carry any content**

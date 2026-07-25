@@ -14,6 +14,7 @@ key*.txt
 data/chroma/
 data/corpus/
 data/corpus_unmatched.json
+data/contacts.json
 data/catalog.json
 data/review_queue.jsonl
 logs/
