@@ -1,4 +1,4 @@
-# Dawlati-Assist — an agentic AI for Lebanese government procedures
+# OnMyBehalf — an agentic AI for Lebanese government procedures
 
 MSBA 316 (Text Analytics & NLP, AUB, Summer 2025/26) course project. **Team:** Gaby, Mariam, Ali,
 Ghina, Maria.

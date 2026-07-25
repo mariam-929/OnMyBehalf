@@ -2,8 +2,8 @@
 """
 import streamlit as st
 
-st.set_page_config(page_title="Dawlati-Assist", page_icon="🇱🇧")
-st.title("Dawlati-Assist")
+st.set_page_config(page_title="OnMyBehalf", page_icon="🇱🇧")
+st.title("OnMyBehalf")
 st.info("UI scaffold — built at G9 (Jul 27–28). Will render the checklist answer, an 'Agent trace' "
         "expander (from state.trace_events), a raw-JSON expander, RTL for Arabic, and a "
         "'CACHED — EMERGENCY MODE' banner under --offline.")
