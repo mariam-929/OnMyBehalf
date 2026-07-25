@@ -36,7 +36,7 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 
 | Gate | What | Status | Date | Evidence | Human sign-off |
 |---|---|---|---|---|---|
-| G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic (Mariam read them 2026-07-25, but she RAN the bakeoff — producer ≠ reviewer, so it does not close the gate) |
+| G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS ×2 | 2026-07-25 | **reproduced independently by Ali**: gpt-oss 10/10@0.523s vs qwen 10/10@1.172s (Mariam: 10/10@0.55s vs 9/10@1.38s). Winner unchanged. report/evidence/bakeoff.md; data/model_limits.json (8K TPM both) | **PENDING: Maria** confirms Arabic (Mariam read them 2026-07-25, but she RAN the bakeoff — producer ≠ reviewer, so it does not close the gate) |
 | G1 | Service catalog (249 posts) | ✅ PASS | 2026-07-25 | data/catalog.json — 249 (195/24/30), 0 dup ids, all modified_gmt; `check_g1.py` 7/7; report/evidence/coverage.md | **Mariam 2026-07-25** (5 URLs load, titles match) |
 | G1b | Contact catalog (/en/directory crawl) | ✅ PASS | 2026-07-25 | 126 ContactRecords, all valid; coverage 100%/95%; contacts_coverage.md | **Mariam 2026-07-25** (verified live: ministries have location+site+hours+portals, no phone; 15 hotlines in Useful Numbers tab). 2 enhancement findings logged |
 | G2 | Corpus quality (REFRAMED: ajax, not crawl) | AUTO PASS (integrity) | 2026-07-25 | 193 corpus records generated, 180 complete, 0 overwrite, check_g2.py | **PENDING: Maria/Ghina** verify spike_gold + field-check 3 |
@@ -159,7 +159,7 @@ unless a member picks one up.
 
 | Report/demo claim | Artifact needed | Capture moment | Path | Captured? |
 |---|---|---|---|---|
-| Model decision | bakeoff numbers table | G0 | report/evidence/bakeoff.md | [ ] |
+| Model decision | bakeoff numbers table | G0 | report/evidence/bakeoff.md | [x] both runs + the reproducibility caveat + the French-visa refusal difference |
 | Coverage denominators | catalog/fetched/extracted/verified counts | G1–G3 | report/evidence/coverage.md | [~] catalog=249 captured at G1; fetched/extracted/verified pending G2–G3 |
 | Retrieval quality | G4 gold results + θ values | G4 | report/evidence/retrieval.md | [ ] |
 | Agent loop / 2 ext calls | trace excerpt (JSONL) | G6 | report/evidence/trace_normal.json | [ ] |
@@ -242,6 +242,25 @@ unless a member picks one up.
   assumed) — expected, not a blocker.
 
 ## Session log (newest first)
+
+- **2026-07-25 (Ali — G0 reproduced independently + bakeoff evidence captured):** Groq key wired
+  into Ali's `.env` (gitignored; verified never tracked, absent from history). Ran
+  `tests/gates/check_g0.py` on the second machine: **gpt-oss-120b 10/10 @0.523s p50 vs qwen3.6
+  10/10 @1.172s**, 8K TPM both. **AUTO PASS again; winner unchanged.** Two things this second run
+  established that the first could not:
+  (1) **The 9/10-vs-10/10 schema gap does NOT reproduce** — Qwen scored 10/10 here, so its single
+  `json_validate_failed` was transient (exactly what its retry path exists to absorb). The report
+  must rest the model decision on the reproducible grounds — 2.2× latency, strict `json_schema`
+  support, non-Preview — and not on the schema-validity difference.
+  (2) **A behavioural difference worth reporting:** on the adversarial fixture "How do I apply for
+  a French visa?" GPT-OSS returned `invalid_request` (correct per FR8) while **Qwen returned
+  `service_query`** — it would have attempted an answer. That maps onto one of the 6 adversarial
+  eval cases and is a quality argument for the winner, not just a speed one. n=1, so an
+  observation rather than a measured refusal rate.
+  Evidence register row "Model decision" now filled: `report/evidence/bakeoff.md`.
+  Also fixed a stale docstring in `fetch_directory.py` (it still claimed phones are empty for every
+  ministry, which Mariam's hotline-join enhancement superseded). **Key note: the Groq key was
+  pasted into a chat transcript — rotate it before submission on Jul 29.**
 
 - **2026-07-25 (corpus generation + G2 setup, after PR #1 merge):** Reviewed + verified Ali's PR
   (independently reproduced 193 records). Generated the corpus for real → 193 `data/corpus/*.json`.
