@@ -1,0 +1,623 @@
+INDEPENDENT ADVERSARIAL PRE-CODE REVIEW
+Dawlati Government-Services Agent
+Review date: 2026-07-25
+Reviewer role: independent AI-engineering lead and course-grader proxy
+Review state: planning complete, zero code, last checkpoint before implementation
+
+PURPOSE
+=======
+
+This file is the handoff from the independent review to the LLM/person that planned the project.
+It records every finding that must be considered before implementation. It does not itself amend
+SCOPE.md, TECH_PLAN.md, VERIFICATION.md, PROGRESS.md, or CLAUDE.md.
+
+Required response protocol for the planning LLM:
+
+1. Address BLOCKER findings before authorizing implementation.
+2. For every finding, record one disposition:
+   ACCEPTED / PARTIALLY ACCEPTED / REJECTED WITH EVIDENCE / DEFERRED WITH EXPLICIT RISK.
+3. For every accepted finding, identify:
+   - exact document and section changed;
+   - exact new requirement, contract, gate, or schedule entry;
+   - verification evidence that will prove the change works;
+   - owner and deadline.
+4. Do not close a finding with wording alone when it requires an empirical spike or gate.
+5. Do not silently weaken a locked requirement. Any scope cut must be explicit in SCOPE.md,
+   justified against the grading rubric, and recorded in PROGRESS.md Decisions.
+6. Preserve the finding IDs below in the response/change log so resolutions are auditable.
+
+
+EXECUTIVE VERDICT
+=================
+
+The plan is not executable as written; proceed only after amendments, not as-is.
+The single biggest risk is immediate: both planned Groq models were retired on July 17, 2026.
+The freshness design will classify pages incorrectly because it hashes fetched HTML against
+extracted text.
+The evaluation can pass while returning wrong document lists, fees, and durations.
+A strict grader could reject the "agent" and "two external tool calls" claims because the graph is
+mostly fixed and the demo calls are local.
+The four-day schedule contains roughly 9, 12, 8, and 8 hours of optimistic work before gate
+failures or report evidence collection.
+The differentiation is credible, but the business evidence is not.
+Fix F01-F16 before code; explicitly de-scope non-rubric features if the extension is not confirmed.
+
+
+FINDINGS REGISTER
+=================
+
+F01 | BLOCKER | Dimension 5
+References: TECH_PLAN.md §§1.2, 4, 5, 8, 10-11.
+Finding: Primary qwen/qwen3-32b and fallback Meta Llama 4 Scout were shut down on 2026-07-17,
+so G0 cannot pass despite the plan claiming verification on 2026-07-25.
+Fix: Reopen the model decision and spike qwen/qwen3.6-27b JSON mode versus
+openai/gpt-oss-120b strict outputs on Arabic quality, schema behavior, latency, and account quota
+before any other implementation.
+External evidence:
+https://console.groq.com/docs/deprecations
+https://console.groq.com/docs/structured-outputs
+https://console.groq.com/docs/reasoning
+
+F02 | BLOCKER | Dimension 4
+References: SCOPE.md FR6 and §5; TECH_PLAN.md §§3 and 4.6.
+Finding: content_hash is defined over extracted raw_text, while freshness performs a plain GET and
+hashes the fetched representation, so unchanged pages can appear stale.
+Fix: Define one canonical fetch-render-extract-normalize function and hash its output during both
+crawl and freshness checks.
+
+F03 | BLOCKER | Dimension 1
+References: Course brief §§1-2 and §6.2; CLAUDE.md "Hard requirements"; SCOPE.md §§5 and 9;
+TECH_PLAN.md §4.
+Finding: The fixed graph does not clearly let the model decide, observe, and repeat tool use, while
+the demo's two highlighted calls are local retrieval/resolution rather than unambiguously external
+calls.
+Fix: Specify a visible decision/tool loop and guarantee two grader-defensible external calls in the
+normal demo path, with each observation affecting the next decision.
+
+F04 | BLOCKER | Dimension 6
+References: Course brief §6.1 Table 6; SCOPE.md §§1 and 8; TECH_PLAN.md §7;
+VERIFICATION.md G6/G8.
+Finding: Evaluation asserts action, schema, flags, and URL membership but has no gold document
+lists, fees, authorities, locations, or durations, so it cannot establish the claimed 90%
+correctly-sourced completeness or zero factual hallucinations.
+Fix: Add claim-level gold annotations and compare normalized output fields against them, with
+manual audit of every curated-core answer used for the zero-hallucination claim.
+
+F05 | BLOCKER | Dimension 4
+References: Course brief §8; CLAUDE.md "Deadline"; PROGRESS.md "Where we are" and "Blockers".
+Finding: The compliance ground truth says 2026-07-26, while the plan relies on an explicitly
+unconfirmed verbal extension to 2026-07-29.
+Fix: Obtain written confirmation immediately and maintain a July-26 survival scope until it exists.
+
+F06 | BLOCKER | Dimension 3
+References: CLAUDE.md "4-day plan"; TECH_PLAN.md §9; VERIFICATION.md dependency chain.
+Finding: The schedule exceeds a normal working day on Days 1-2 before failures, human gates,
+repeated evaluations, evidence capture, or integration overhead.
+Fix: Re-estimate by artifact and owner, reserve contingency, parallelize safe work, and pre-authorize
+a rubric-preserving cut order.
+
+F07 | MAJOR | Dimension 4
+References: SCOPE.md FR2-FR3 and §4; TECH_PLAN.md §4.
+Finding: The output schema lacks FR2 suggestions, field-level provenance, plural location structure,
+action-specific payloads, and explicit error/refusal shapes.
+Fix: Replace the illustrative object with a discriminated Pydantic/JSON-Schema union for answer,
+service_not_found, invalid_request, and error.
+
+F08 | MAJOR | Dimension 9
+References: SCOPE.md §§6-7; TECH_PLAN.md §§3-4.
+Finding: Catalog records, extracted required_documents, resolver input/output, and
+resolved_documents[] lack one end-to-end typed contract, leaving implementers to guess whether
+documents are prose, strings, or objects.
+Fix: Define versioned models for CatalogRecord, CorpusRecord, ExtractedDocument, ResolvedDocument,
+and RetrievedCandidate, with explicit producer/consumer mappings.
+
+F09 | MAJOR | Dimension 9
+References: SCOPE.md FR5 and §4; TECH_PLAN.md §4.7.
+Finding: No rule parses Arabic time strings or decides units, ranges, business days, sequential
+versus parallel prerequisites, or lower-bound arithmetic.
+Fix: Specify a normalized duration model and deterministic aggregation algorithm with examples for
+unknown, range, parallel, and zero-duration cases.
+
+F10 | MAJOR | Dimension 7
+References: SCOPE.md FR2 and §5; TECH_PLAN.md §§1.3 and 4.4; VERIFICATION.md G4.
+Finding: BM25 and cosine values are unioned and subjected to an undefined "max-score < 0.35" test
+even though their scales and orientations differ.
+Fix: Define reciprocal-rank fusion or calibrated normalized scores, then derive rejection and
+ambiguity thresholds from a labeled development set.
+
+F11 | MAJOR | Dimension 9
+References: SCOPE.md §8 edge cases; TECH_PLAN.md §4.4.
+Finding: "Query naming two services" is a planned test, but the graph always picks one top service
+and defines neither disambiguation nor multi-service output.
+Fix: Route near-ties or explicit multiple-service queries to a structured clarification response.
+
+F12 | MAJOR | Dimension 9
+References: SCOPE.md FR1; TECH_PLAN.md §§3 and 4.7.
+Finding: FR1 requires English glosses, but title_en is nullable and no authorized translation/gloss
+policy exists, forcing invention or noncompliance.
+Fix: Add curated bilingual aliases for the core and specify that missing non-core glosses remain
+null or are visibly labeled as machine translations.
+
+F13 | MAJOR | Dimension 9
+References: SCOPE.md FR3 and FR7; TECH_PLAN.md §§3 and 4.5; VERIFICATION.md G2.
+Finding: A service whose required-documents section fails extraction has no defined outcome, yet
+core membership alone forces confidence of at least 0.7.
+Fix: Make missing critical sections an explicit incomplete-record state that forces review, low
+confidence, and no "complete checklist" claim.
+
+F14 | MAJOR | Dimension 9
+References: SCOPE.md "Memory design"; TECH_PLAN.md §§4.3 and 6.
+Finding: Follow-up routing skips retrieval without defining behavior when no prior service exists,
+when the session holds only service_record, or when asked "which documents do I have."
+Fix: Define required prior-state fields and return a clarification when history is absent or the
+requested fact cannot be inferred.
+
+F15 | MAJOR | Dimension 9
+References: SCOPE.md §15; TECH_PLAN.md §§5 and 10; VERIFICATION.md G11.
+Finding: Wi-Fi failure is treated only as a freshness failure even though Groq composition will
+also fail, and a backup video does not produce the required live task.
+Fix: Add a clearly labeled cached-demo mode or local deterministic composer and rehearse provider
+outage separately from source outage.
+
+F16 | MAJOR | Dimension 1
+References: Course brief §5.1; SCOPE.md §7; TECH_PLAN.md §§2 and 4; PROGRESS.md checklist.
+Finding: System prompts and few-shot examples are described by category but not drafted, so role,
+mandate, tools, negative constraints, exact schemas, and exemplar outputs remain unverified.
+Fix: Draft all three v1 prompts and the actual examples before graph implementation.
+
+F17 | MAJOR | Dimension 1
+References: Course brief §9; SCOPE.md §10.4; PROGRESS.md Session log and Day 4.
+Finding: The mandatory AI log does not exist after completed planning sessions and this review,
+making exact prompt-response reconstruction increasingly unreliable.
+Fix: Start the exact-format log before implementation and backfill existing interactions from
+available session history now.
+
+F18 | MAJOR | Dimension 2
+References: SCOPE.md §1; CLAUDE.md "Dawlati recon".
+Finding: The pitch assumes visit counts, time loss, deflection, and competitor limitations without
+evidence or a named organizational owner of the review queue.
+Fix: Reframe the product as auditable procedure decision support for citizens and OMSAR content
+operations, supported by a small documented competitor benchmark and clearly labeled assumptions.
+
+F19 | MAJOR | Dimension 4
+References: CLAUDE.md "Scope decisions"; SCOPE.md §6; TECH_PLAN.md §§1.4 and 9;
+VERIFICATION.md G1/G2.
+Finding: "Full corpus" variously means 195, about 230, about 250, or 150 qualifying pages, allowing
+gates to pass while the report overclaims coverage.
+Fix: Freeze exact post types and expected counts and report separate catalog, fetched, extracted,
+and verified coverage denominators.
+
+F20 | MAJOR | Dimension 8
+References: SCOPE.md §6; VERIFICATION.md G2/G3.
+Finding: Forty services are claimed hand-verified field-by-field, but the human gate checks three
+closely and skims seven.
+Fix: Require a 40-row verification sheet with reviewer, date, required fields, discrepancies, and
+source URL.
+
+F21 | MAJOR | Dimension 9
+References: SCOPE.md §§6 and 10; TECH_PLAN.md §3.
+Finding: review_queue.json has incompatible event shapes across unresolved, stale, changed, and
+unreachable writers, with no atomic-write, deduplication, status, reviewer, or approval contract.
+Fix: Define one append-safe queue schema and lifecycle: open, assigned, corrected/approved,
+reindexed, and closed.
+
+F22 | MAJOR | Dimension 5
+References: SCOPE.md §§10 and 13; TECH_PLAN.md §1 observability.
+Finding: The privacy claim says queries persist only locally while LangSmith tracing sends and
+retains inputs, outputs, and graph state in cloud traces.
+Fix: Use local JSONL for the demo or explicitly redact/disable LangSmith inputs and outputs and
+disclose retention.
+External evidence:
+https://docs.langchain.com/langsmith/mask-inputs-outputs
+https://docs.langchain.com/langsmith/data-storage-and-privacy
+
+F23 | MAJOR | Dimension 6
+References: SCOPE.md FR7; TECH_PLAN.md §4.
+Finding: Confidence is assigned from curated-core membership rather than retrieval margin,
+extraction completeness, resolver coverage, or freshness, making it a label rather than calibrated
+confidence.
+Fix: Compute confidence from explicit evidence-quality factors and allow stale, incomplete, or
+ambiguous core records below 0.7.
+
+F24 | MAJOR | Dimension 6
+References: SCOPE.md FR4-FR6; TECH_PLAN.md §4.6.
+Finding: Freshness checks only the primary service page, leaving per-document corpus and lookup-table
+sources potentially stale while the answer appears globally fresh.
+Fix: Track and aggregate freshness for every source contributing a factual claim.
+
+F25 | MAJOR | Dimension 4
+References: SCOPE.md §5; TECH_PLAN.md §§2 and 4.
+Finding: Tavily has no intent label, routing edge, state field, output schema, or demo path, so it is
+a dead tool that cannot support the tool-call claim.
+Fix: Remove Tavily or fully specify an in-scope intent, route, provenance contract, and test case.
+
+F26 | MAJOR | Dimension 3
+References: TECH_PLAN.md §§1.4, 3, and 9; VERIFICATION.md G2.
+Finding: The crawler assumes networkidle, stable Arabic headings, clean inner_text, 20-30 minute
+completion, and 150 pages with document sections without evidence that any selector works.
+Fix: Make a 10-page vertical spike the first crawl task and trigger core-only fallback from measured
+extraction recall, not elapsed time alone.
+
+F27 | MAJOR | Dimension 3
+References: TECH_PLAN.md §§5 and 9; VERIFICATION.md G6/G8.
+Finding: The stated 25-second spacing, approximately 4K-token requests, 15-minute run, retries, and
+20-second user latency are not reconciled, while latency may exclude user-visible backoff.
+Fix: Recalculate from the chosen model's actual rate-limit headers and report user-visible latency
+including all waits, with diagnostic latency separately.
+External evidence:
+https://console.groq.com/docs/rate-limits
+
+F28 | MAJOR | Dimension 9
+References: Course brief §§6.1, 6.2, and 9; TECH_PLAN.md §9; PROGRESS.md checklist.
+Finding: Screenshots, architecture figures, prompt diffs, two real failure narratives, manual audits,
+trace evidence, raw logs, and AI interactions lack explicit capture tasks during Days 1-3.
+Fix: Add an evidence register whose rows name the report/demo claim, artifact, capture moment, owner,
+and storage path.
+
+F29 | MAJOR | Dimension 8
+References: VERIFICATION.md dependency chain; TECH_PLAN.md §9.
+Finding: G5 is unnecessarily blocked by corpus work, while UI, report, repository, and prompt work
+are delayed until after evaluation despite being safely parallelizable.
+Fix: Let graph/UI work against fixtures after G0 and run report/repository compliance continuously
+rather than after G8.
+
+F30 | MAJOR | Dimension 8
+References: VERIFICATION.md G0-G11.
+Finding: No gate validates actual system-prompt elements, concrete few-shot examples, three genuine
+prompt failure analyses, two external calls, dynamic agent behavior, AI-log completeness, or all-40
+core verification.
+Fix: Add these rubric requirements explicitly to G6, G8, and G10 pass criteria.
+
+F31 | MAJOR | Dimension 8
+References: VERIFICATION.md G2, G4, G6, and G8.
+Finding: G2 rewards any non-empty document text, G4 permits top-3 when production picks top-1, and
+G6/G8 test URLs rather than claim correctness.
+Fix: Gate extraction on field precision/recall, retrieval on top-1 plus calibrated abstention, and
+answers on claim-level gold facts.
+
+F32 | MAJOR | Dimension 8
+References: VERIFICATION.md rules/G0; TECH_PLAN.md §1.2.
+Finding: G0 blocks all coding even though its own script does not yet exist, and its one-token ping
+does not exercise reasoning, full schema, Arabic, or fallback behavior.
+Fix: Define a bootstrap exception for gate creation and make G0 run a representative structured
+Arabic request on every candidate model.
+
+F33 | MAJOR | Dimension 5
+References: TECH_PLAN.md §§1.1, 4.6, and 11.
+Finding: LangGraph 1.2 fault-tolerance features are currently alpha and timeouts are async-only,
+while the proposed freshness call appears synchronous.
+Fix: Use an async node deliberately or retain stable LangGraph and implement the five-second HTTP
+timeout and recovery in ordinary code.
+External evidence:
+https://docs.langchain.com/oss/python/langgraph/fault-tolerance
+
+F34 | MAJOR | Dimension 9
+References: TECH_PLAN.md §9; VERIFICATION.md human gates; PROGRESS.md checklist.
+Finding: Tasks and human sign-offs name no artifact owners or scheduled reviewers, so blocking
+outputs can finish with nobody assigned to approve them.
+Fix: Assign one owner and one independent reviewer to every Day 1-4 artifact and gate.
+
+F35 | MAJOR | Dimension 4
+References: SCOPE.md FR1 and §7; TECH_PLAN.md §§1, 4.1, and 4.3.
+Finding: Language is produced by both a character heuristic and the classifier without precedence
+rules for disagreement, short strings, numerals, or mixed Arabic-English queries.
+Fix: Define one authoritative language function, denominator, mixed-query policy, and classifier
+reconciliation rule.
+
+F36 | MAJOR | Dimension 4
+References: SCOPE.md FR4, FR6, and §4.
+Finding: Global needs_human_review aggregation is undefined when one document is unresolved, another
+source is stale, or the service is fresh.
+Fix: Specify that the global flag is the OR of all service, document, freshness, and validation
+review conditions and expose their reasons.
+
+F37 | MAJOR | Dimension 6
+References: SCOPE.md §§5, 10, and 12; TECH_PLAN.md §§1 and 4.
+Finding: Nine nodes, three LLM prompts, Tavily, dual trace systems, live recrawl, and conversational
+follow-ups consume schedule without proportional rubric value.
+Fix: Preserve one few-shot prompt and the visible agent loop, but cut Tavily, follow-ups, LangSmith,
+and live diff automation before reducing evaluation or report work.
+
+F38 | MINOR | Dimension 5
+References: TECH_PLAN.md §§1.3, 3, and 11.
+Finding: BGE-M3 is defensible, but the cited arXiv identifier is not the BGE-M3 paper and the Arabic
+RAGAS result source is omitted.
+Fix: Cite arXiv 2402.03216 for BGE-M3 and arXiv 2506.06339 for the Arabic comparison, then benchmark
+on this corpus.
+External evidence:
+https://arxiv.org/abs/2402.03216
+https://arxiv.org/abs/2506.06339
+
+F39 | MINOR | Dimension 4
+References: TECH_PLAN.md §§1.1 and 8; SCOPE.md §14.
+Finding: The plan says versions are pinned but specifies ranges such as langgraph>=1.2,<1.3 and
+pydantic ~2.x.
+Fix: Choose exact compatible versions after the stack spike and use == throughout.
+
+F40 | MINOR | Dimension 4
+References: CLAUDE.md "Dawlati recon" and "4-day plan"; SCOPE.md §15; TECH_PLAN.md §1.4.
+Finding: The manual fallback is alternately 30-50 pages or exactly 40 core pages.
+Fix: Define the fallback as the exact verified core set and one manifest-driven local format.
+
+F41 | MINOR | Dimension 7
+References: SCOPE.md FR1; TECH_PLAN.md §6; VERIFICATION.md G9.
+Finding: Arabic output is required, but the UI specification has no RTL layout, Arabic font, or
+bidirectional-table acceptance criterion.
+Fix: Add an RTL renderer and a visual Arabic UI gate.
+
+F42 | MINOR | Dimension 8
+References: VERIFICATION.md G10; TECH_PLAN.md §8.
+Finding: G10 uses Unix grep in a Windows plan and scans only three key prefixes, so it is neither
+portable nor comprehensive.
+Fix: Use a Python secret scanner plus a standard tool such as Gitleaks and check history, working
+tree, and public clone.
+
+F43 | NIT | Dimension 4
+References: CLAUDE.md "What this project is".
+Finding: The referenced brief filename omits 316 and does not match the actual PDF.
+Fix: Correct the path before it becomes a broken repository/report link.
+
+
+BRIEF-COMPLIANCE SUMMARY
+========================
+
+Requirement                         Coverage location                    Status       Grade risk
+Agent reasoning loop                SCOPE §5; TECH_PLAN §4               PARTIAL      HIGH
+At least two external tool calls    CLAUDE hard req.; SCOPE §5          PARTIAL      HIGH
+Structured output                   SCOPE §4                             PARTIAL      HIGH
+Five system-prompt elements         SCOPE §7                             PARTIAL      HIGH
+CoT                                 SCOPE §7; TECH_PLAN §4.7             PARTIAL      MEDIUM
+Few-shot with at least 2 examples   SCOPE §7                             PARTIAL      HIGH
+20+ tests                           SCOPE §8                             PARTIAL      HIGH
+At least two failure analyses       CLAUDE req.; PROGRESS Day 3-4       MISSING      HIGH
+Report sections 1-8                 SCOPE cross-refs; TECH_PLAN §9       PARTIAL      HIGH
+Demo requirements                   SCOPE §9                             PAPER ONLY   HIGH
+Repository structure                TECH_PLAN §2; SCOPE §14              COVERED      LOW
+AI-usage appendix                   SCOPE §10; PROGRESS Day 4            MISSING NOW  HIGH
+Rubric "Exceeds" evidence            SCOPE §§7-14; G8-G11                 PARTIAL      HIGH
+
+Strict-grader rejection risks:
+
+- The graph may be judged a deterministic pipeline rather than an agentic reasoning loop.
+- The highlighted demo calls may not count as two external tool calls.
+- URL membership may be presented incorrectly as a hallucination metric.
+- Prompt categories may be presented incorrectly as actual few-shot exemplars.
+- Ten sampled pages cannot support a claim that forty core services were field-verified.
+- Planned future failure analysis is not evidence of failures encountered and corrected.
+
+
+BUSINESS-CASE CORRECTION
+========================
+
+The differentiation is genuine only if provenance and freshness operate per factual claim.
+Structured field-level answers, prerequisite-document resolution, explicit unknowns, and a content
+review queue enable a different decision from generic Q&A: whether a citizen is ready to visit and
+whether OMSAR should trust or review the underlying content.
+
+The weakest point is evidence. SCOPE.md §1 assumes two-to-three visits, four hours per failed visit,
++20% first-visit completion, and deflection value without measured or cited baselines. The project
+also lacks a named organizational owner of the review queue.
+
+Recommended pitch:
+
+"An auditable preparation and content-quality layer for Dawlati that turns procedure pages into
+source-linked checklists and routes incomplete or changed content to OMSAR reviewers."
+
+Present citizens as users, OMSAR content operations as the system owner, and first-visit readiness
+plus reviewer correction rate as outcomes. Add a small documented comparison against the existing
+assistant/aggregators, and label team assumptions explicitly.
+
+
+FEASIBILITY AND CUT ORDER
+=========================
+
+Top schedule risks, based on the documented plan:
+
+1. Dead model contract: 100% as specified; blocks the entire agent, evaluation, and demo.
+2. Crawl/extraction shortfall: estimated 60-70%; blocks corpus, resolver, and trustworthy evaluation.
+3. Days 3-4 overload: estimated 70%; threatens the report and demo, which carry 90% of the grade.
+
+Retrieval risk:
+Hybrid dense plus BM25 is plausible, but undefined score fusion makes the 0.35 threshold meaningless.
+Expect visible top-1 or abstention errors until calibrated on project-specific Arabic and English
+queries.
+
+Rate-limit risk:
+The candidate-model and account limits must be read from the actual Groq console/headers.
+User-visible latency must include retries and rate-limit waits; an "excluding backoff" figure is
+diagnostic only and must not replace the end-to-end success criterion.
+
+If half a day is lost, cut in this order:
+
+1. Tavily and its adjacent-query path.
+2. Conversational follow-ups/memory.
+3. LangSmith cloud tracing; retain local JSONL.
+4. Full-corpus coverage beyond the verified 40-service core.
+5. Live recrawl/diff automation; retain a deterministic freshness simulation.
+6. UI polish beyond functional RTL rendering.
+
+Do not cut below 20 test cases, the visible agent/tool loop, prompt evidence, the report, or the
+backup video.
+
+
+IMPLEMENTABILITY RATINGS
+========================
+
+Module                         Completeness /5   Main unresolved choices
+Catalog/fetch crawler          3                 Catalog schema, readiness, selectors, canonical payload
+Extractor                      2                 Section aliases, list type, cleanup, fee/time parsing
+Indexer                        3                 Tokenizer, normalization, BM25 persistence, score fusion
+detect_language                4                 Denominator, ties, mixed-input behavior
+validate_input                 4                 Gibberish definition, normalization order, false positives
+classify_intent                3                 Actual prompt, no-history follow-up, adjacent intent
+retrieve                       2                 Fusion, score direction, threshold, ties, language filter
+resolve_documents              2                 Input type, fuzzy threshold, collisions, output mapping
+check_freshness                1                 Hash representation, rendering, atomic queue, source scope
+compose                        1                 Working model, prompt, real schema, time arithmetic
+validate_schema                3                 Discriminated models, refusal/error repair
+respond                        3                 Provider failure, partial trace, logging/privacy
+Evaluation harness             1                 Concrete cases, factual gold, denominators, repeat policy
+Streamlit                      3                 RTL, offline/error UI, trace timing, safe rendering
+Gate scripts G0-G11            2                 Bootstrap, fixtures, portability, owners, evidence format
+
+The ten highest-value specifications to close before coding are:
+
+1. Working model/API contract.
+2. Action-specific output schema.
+3. Canonical corpus/hash models.
+4. Extracted-document type.
+5. Duration model and aggregation.
+6. Retrieval fusion and abstention.
+7. Ambiguity and missing-section behavior.
+8. Follow-up state contract.
+9. Provider-outage behavior.
+10. Claim-level evaluation oracle.
+
+
+VERIFICATION-GATE CORRECTIONS
+=============================
+
+G0:
+- Circular because it blocks coding while its own script does not exist.
+- A one-token ping does not test Arabic, schema, reasoning, or fallback behavior.
+
+G1:
+- Checks a threshold rather than the exact promised catalog denominator.
+
+G2:
+- Can reward extraction garbage merely because required_documents is non-empty.
+- Does not establish the claimed forty-service field-by-field verification.
+
+G3:
+- "Someone familiar with the procedure" is not a substitute for documented source evidence.
+
+G4:
+- Top-3 retrieval is insufficient when production automatically selects top-1.
+- It does not calibrate the service-not-found threshold or ambiguity margin.
+
+G5:
+- Covers one mocked happy traversal and can run much earlier against fixtures.
+
+G6:
+- URL membership does not prove that checklist facts are correct.
+
+G7:
+- Does not prove canonical live-page equivalence or per-document freshness.
+
+G8:
+- A ten-answer sample cannot support zero hallucinations across the curated core.
+
+G9:
+- Health endpoint and Python response-object tests can pass with broken browser/RTL rendering.
+
+G10:
+- Omits AI-log completeness and detailed prompt requirements.
+- The secret command is non-portable and incomplete.
+
+G11:
+- Strongest gate, but must add provider-outage rehearsal.
+
+Dependency changes:
+
+- Permit graph, UI shell, report outline, repository work, prompts, and AI/evidence logging to proceed
+  in parallel from fixtures after G0.
+- Require retrieval calibration before final resolver/composer evaluation.
+- Require the representative model/schema spike before prompt implementation.
+
+
+EARLY-GAP SWEEP
+===============
+
+Gap                              Where it bites       Cost if late           Spec addition
+Retired model/API                Day 1 G0             Blocks all agent work  Tested model matrix + fixture
+HTML/text hash mismatch          Day 2 freshness      Node/data rewrite      Shared canonical representation
+No external-call/agent proof     Demo/report          Major grade loss       Required loop and calls
+Invalid evaluation oracle        Day 3                Suite/report rewrite  Claim-level factual gold
+Schema/action mismatch           Nodes/UI/eval        Multi-module rewrite  Discriminated shared schema
+Undefined pipeline records       Days 1-2             Extractor/resolver redo Typed boundary models
+Undefined time arithmetic        Day 2 composer       Wrong visible answers Normalized duration algorithm
+Uncalibrated retrieval           Day 2 graph          Routing rewrite        Fusion/abstention/tie rules
+Missing extraction behavior      Days 1-2             False confidence       Incomplete-record state
+Missing bilingual behavior       Day 2 composer       Guessing/noncompliance Curated/null/labeled policy
+Follow-up without state          UI/demo              Crash/fabrication      Prior-state or clarification rule
+Groq outage                      Live demo            No live output         Labeled cached/local fallback
+Queue/flag contracts             Day 2/UI             Corruption/inconsistency Queue lifecycle + aggregation
+Evidence not captured            Day 4                Irrecoverable report gaps Evidence register from Day 1
+No owner/reviewer                Every human gate     Idle blocking time     Owner + review window per artifact
+Crawler single point of failure  Day 1                Scope crisis           Measured core-only fallback
+Cloud trace/privacy conflict     Day 2/report          Governance rewrite     Redaction or local-only trace
+
+
+TOP-10 DOCUMENT CHANGES BEFORE CODE
+===================================
+
+1. Replace the retired model plan with a same-day Arabic/schema/latency bakeoff and exact API
+   fixture. Findings: F01, F27, F32, F33.
+
+2. Confirm the July 29 extension in writing; otherwise activate a July 26 survival scope.
+   Finding: F05.
+
+3. Freeze canonical pipeline contracts, including the shared hash representation and discriminated
+   response schema. Findings: F02, F07, F08, F21, F36.
+
+4. Rewrite the agent specification so two unambiguous external calls occur inside a visible
+   decide-act-observe loop. Findings: F03, F25.
+
+5. Create the 20-24 concrete test cases now with claim-level gold facts, source excerpts, and
+   expected ambiguity/refusal behavior. Findings: F04, F10-F13.
+
+6. Specify retrieval fusion, thresholds, bilingual fallback, duration arithmetic, missing-section
+   behavior, and follow-up state. Findings: F09-F14, F35.
+
+7. Rebaseline the four-day schedule, assign owners/reviewers, parallelize gates, and pre-authorize
+   the cut order. Findings: F06, F29, F34, F37.
+
+8. Draft all v1 prompts and actual few-shot examples, then add prompt/rubric checks to the gates.
+   Findings: F16, F30.
+
+9. Define provider-outage, per-source freshness, review-queue, privacy/redaction, and RTL demo
+   behavior. Findings: F15, F21-F24, F41.
+
+10. Start the AI/evidence registers and strengthen the business pitch with a documented competitor
+    benchmark and labeled baseline assumptions. Findings: F17, F18, F28.
+
+
+ITEMS REQUIRING EMPIRICAL OR EXTERNAL CONFIRMATION
+==================================================
+
+- Written confirmation of the July 29 deadline extension.
+- Actual Dawlati crawl selectors, rendered-content completeness, heading variation, Cloudflare
+  stability, and page-level extraction quality.
+- Current OMSAR Assistant/aggregator behavior and whether a five-query comparison supports the
+  proposed differentiation.
+- Groq account-specific model permissions and quotas.
+- Arabic output quality, structured-output compatibility, reasoning behavior, and latency of
+  qwen/qwen3.6-27b versus openai/gpt-oss-120b.
+- Whether the selected LangGraph, langgraph-prebuilt, Groq SDK, Chroma, Torch, and Python 3.12
+  versions install and work together.
+- BGE-M3 RAM use, download time, indexing time, and query latency on the actual laptop.
+- Playwright Chromium installation, disk capacity, OneDrive interaction, venue firewall access,
+  and Streamlit Arabic rendering.
+- Tavily/LangSmith account availability and current no-card terms, if those components are retained.
+- Team size, individual availability, Arabic procedure expertise, and gate-review assignments.
+- Public GitHub/video-host permissions and availability of the second demo device.
+
+
+RESOLUTION TEMPLATE
+===================
+
+The planning LLM should append or maintain a separate resolution table using this shape:
+
+Finding ID:
+Disposition:
+Reason:
+Documents changed:
+Exact sections changed:
+New requirement/contract/gate:
+Owner:
+Deadline:
+Verification evidence:
+Residual risk:
+
+Implementation must not begin while any BLOCKER remains unresolved or rejected without concrete
+evidence accepted by the project owner.

@@ -11,6 +11,12 @@ national public-services portal (OMSAR).
 
 > Demo video: _(added at G10)_
 
+## Teammates: start here
+- **`CONTRIBUTING.md`** — your part, how the work splits, whether it parallelizes (it does), workflow.
+- **`SETUP.md`** — environment setup end to end.
+- **`docs/`** — the full plan: `SCOPE`, `SCHEMA_AND_CONTRACTS`, `TECH_PLAN`, `VERIFICATION`,
+  `PROGRESS` (live status + owners), `RESOLUTIONS` (+ `reviews/` decision trail).
+
 ## Architecture (one line)
 `detect_language → validate_input → classify_intent → retrieve (RRF: BM25+BGE-M3) → bounded research
 loop (resolve_document · check_freshness · live_service_lookup) → compose → validate_schema → respond`,

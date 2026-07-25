@@ -1,0 +1,278 @@
+INDEPENDENT ADVERSARIAL PRE-CODE REVIEW — V3 DOCUMENT SET (THIRD PASS)
+Dawlati Government-Services Agent
+Review date: 2026-07-25
+Reviewer role: independent adversarial reviewer + course-grader proxy
+Review state: v3 planning docs, zero code, G0 not run — LAST checkpoint before implementation
+
+
+PURPOSE AND AUTHORITY
+=====================
+
+This is the third independent pre-code pass. It is NOT a fresh teardown and NOT a rubber stamp.
+It audits closure of the ~56 dispositions in RESOLUTIONS.md against the actual v3 files, hunts for
+new defects introduced by the v3 rewrite, and judges residual readiness to start coding.
+
+The N-series IDs below (N1-N6) are the authoritative IDs for this pass. They do NOT renumber the
+F-series (review 1) or A-series (review 2) findings; they are net-new or still-open items found
+after those two reviews were folded.
+
+Documents read in full: MSBA316_Project_Summer_2025_2026.pdf; ../CLAUDE.md; SCOPE.md;
+SCHEMA_AND_CONTRACTS.md; TECH_PLAN.md; VERIFICATION.md; PROGRESS.md; prompts/intent_classifier_v1.md;
+prompts/research_agent_v1.md; prompts/composer_v1.md; tests/gold_claims.seed.json;
+report/AI_LOG.md; RESOLUTIONS.md; ADVERSARIAL_REVIEW_FINDINGS.txt (F01-F43);
+ADVERSARIAL_REVIEW_FINDINGS_REEVALUATION.txt (A01-A30).
+
+No project file was modified as part of this review except the creation of this handoff file.
+
+
+EXECUTIVE VERDICT
+=================
+
+START CODING. Run G0 now — it is fully unblocked and touches none of the defects below.
+
+True architectural blockers: 0. The two prior reviews did real work: every F-series and A-series
+BLOCKER sampled is genuinely folded into v3 with a concrete artifact (schema model, gate criterion,
+prompt file, seed record), not merely asserted in prose. No sampled disposition is PROSE-ONLY or
+fabricated.
+
+The single most important issue is N6: live_service_lookup — one of the two brief-mandated external
+calls — has no typed output contract and no defined consumer for a "newer match." That is exactly
+the "decorative external tool" trap that A06 just fixed for get_contacts, now reintroduced for its
+replacement. Combined with a composer few-shot that invents and sums durations (N1), these are ~2
+hours of edits to the specs/prompts, not a re-plan.
+
+Recommendation: fix N1, N2, N3, N4, N6 in the documents before their consuming gates (G5-G7). None
+block G0, which is the immediate next action.
+
+
+CLOSURE AUDIT — sampled BLOCKERs + suspicious MAJORs (verified against the v3 files, not RESOLUTIONS prose)
+=========================================================================================================
+
+ID    Claimed fix                                              Verified?   Evidence
+F01   Retired models -> G0 bakeoff qwen3.6 vs gpt-oss          YES         TECH_PLAN 1.2; SCOPE 15; G0
+F02   Freshness -> REST modified_gmt; hash for recrawl only    YES         SCOPE FR6; SCHEMA FreshnessResult
+F03   Agent loop + 2 external calls                            YES*        SCOPE 5; G6  (*superseded by A06)
+F04   Claim-level gold; URL demoted to provenance             YES         SCHEMA 3; SCOPE 8; G8
+F05   Deadline Wed Jul 29 in writing                          YES         CLAUDE.md; PROGRESS
+A01   Per-model adapters; each tested at G0                   YES         TECH_PLAN 1.2; SCOPE FR9; G0
+A02   Bounded loop <=2 model / <=8 tool                       PARTIAL     SCOPE 5 OK, but <=8-tool cap
+                                                                          collides w/ per-doc freshness -> N3
+A03   gold_claims separate from CSV                           YES         gold_claims.seed.json; SCHEMA 3
+A05   Schema/adapter = permitted G0 bootstrap                 YES         VERIFICATION rules + G0
+A06/  get_contacts -> live_service_lookup; ContactRecord+G1b  YES         SCHEMA 1; SCOPE 5; G1b
+A27
+A07   Complete discriminated schema, all nested types         PARTIAL     Missing LiveLookupResult,
+                                                                          IntentResult, ResearchPlan -> N6,N2
+A08   Freshness unchanged/changed/unverified + TTL 180d       YES         SCHEMA; SCOPE FR6/FR6b
+A09   Append-only JSONL + portalocker + nullable + dedupe     YES         SCHEMA 1 + queue-discipline note
+A10   Duration units; no cross-unit; computable=false         PARTIAL     composer_v1 few-shot contradicts -> N1
+A11   Resolver normalize + theta_doc + abstention             YES         SCOPE FR4; TECH_PLAN 4
+A12   DEV/HOLDOUT split; 90% top-1-or-clarify                 YES(struct) tiny-n CI risk (see COULD-NOT-ASSESS)
+A26   G6 asserts observation-driven re-plan branch            YES         VERIFICATION G6
+
+Owners (F06/F34/A04/A21) remain correctly OPEN pending team names — a deferred item, not a closure
+failure.
+
+
+NEW FINDINGS REGISTER (N1-N6)
+=============================
+
+N6 | MAJOR | closure-gap (regression of the A06 class)
+References: SCHEMA_AND_CONTRACTS.md sec.1 (pipeline diagram + models); SCOPE.md 5; VERIFICATION.md G6.
+Finding: live_service_lookup is one of the two brief-mandated external calls (G6 asserts it appears
+in the trace), but it has NO typed result model in SCHEMA_AND_CONTRACTS. The pipeline diagram lists
+only ResolvedDocument / Duration / FreshnessResult as research-phase outputs. There is also no
+consumer for a "newer match": review_reasons enum =
+[stale_source, unverified_source, unresolved_document, incomplete_record, schema_retry,
+ambiguous_match] has NO value meaning "a newer/changed service version was found live." So if the
+call returns a newer match, nothing in the answer can react to it -> the external call is
+decorative. This is the exact strict-grader rejection (F25/A06 "dead tool") that A06 just removed
+for get_contacts, reintroduced for its replacement.
+Fix: Add LiveLookupResult{exists: bool, newest_post_id: int|None, newest_modified_gmt: str|None,
+is_newer: bool} to SCHEMA_AND_CONTRACTS; define its effect on the answer (e.g. add
+"newer_version_available" to the review_reasons enum and set needs_human_review when is_newer).
+Owner: __  Reviewer: __
+Closure artifact: model present in agents/models.py; G6 asserts the field is populated AND that a
+is_newer=true fixture sets the review flag.
+Blocks code now? No — resolve at G6, but it is a ~20-minute doc edit; do it now with the batch.
+Residual risk: if left, the two-external-call compliance claim is challengeable in Q&A.
+
+N1 | MAJOR | regression (contradicts A10/FR5 + graded hallucination count)
+References: prompts/composer_v1.md lines 42-46; SCOPE.md FR5; SCHEMA_AND_CONTRACTS.md 3.
+Finding: The composer few-shot shows INPUT evidence "service time=[5,10] business_days" with both
+documents corpus-resolved, then emits OUTPUT time_estimate {computable:true, total_min_days:7,
+total_max_days:15}. The addends that turn [5,10] into [7,15] (the documents' own durations) are
+NEVER shown in the input evidence. A few-shot exemplar is imitated by the model; this one teaches
+it to (a) invent durations for documents whose duration is unknown and (b) sum them into a single
+total. That directly feeds the graded hallucination count (CLAUDE.md: "never invent queue/wait
+times ... graders count hallucinations") and violates FR5 (aggregate only same-unit *stated*
+durations). It also disagrees with the SCHEMA sec.3 gold for the same passport case, whose
+stated_processing is {5,10}.
+Fix: Rewrite the exemplar so every number is derivable from shown evidence: either show each
+document's stated duration in the input, or set total = service-only with is_lower_bound=true, or
+if any component unit is unknown set computable=false and present component-wise.
+Owner: __  Reviewer: __
+Closure artifact: corrected composer_v1 (or v2) few-shot; G6/G8 hallucination audit finds 0 invented
+durations on the core case.
+Blocks code now? No — resolve before the first composer run / at prompt iteration; do now (cheap).
+Residual risk: if left, every composed answer risks an invented total; surfaces at G8 with no slack.
+
+N2 | MAJOR | residual (schema completeness hole; breaks "single source of truth" + FR9 + G5)
+References: prompts/intent_classifier_v1.md lines 12-15; prompts/research_agent_v1.md lines 28-30;
+SCHEMA_AND_CONTRACTS.md sec.1 header; SCOPE.md FR9.
+Finding: Two LLM output shapes exist ONLY in the prompt files, not in the schema:
+ - intent classifier: {"intent","reason","language_advisory"}
+ - research planner:  {"plan":[{"tool","args"}], "done": bool}
+SCHEMA_AND_CONTRACTS.md states it is "the SINGLE source of truth for data shapes; agents/models.py
+implements it verbatim," and FR9 mandates "every LLM output Pydantic-validated (SCHEMA_AND_CONTRACTS)."
+An LLM coding agent building models.py verbatim from the schema will NOT create these two models, so
+G5's schema-round-trip unit test has nothing to validate them against, and the prompt/validator can
+silently diverge.
+Fix: Add IntentResult and ResearchPlan/PlanStep to SCHEMA_AND_CONTRACTS.md. Make the plan's tool
+name a Literal enum of exactly the three research tools
+(resolve_document | check_freshness | live_service_lookup) so an invalid tool name is a validation
+error, not a runtime surprise.
+Owner: __  Reviewer: __
+Closure artifact: both models in agents/models.py; G5 round-trips them.
+Blocks code now? No — resolve at G5 (Jul 26); do now (cheap).
+Residual risk: prompt/validator drift; a mis-emitted plan tool name reaching the executor.
+
+N3 | MAJOR | residual (bounded-loop budget vs FR6b; implementation ambiguity)
+References: SCOPE.md FR6b + 5; prompts/research_agent_v1.md lines 17-23; VERIFICATION.md G6, G7.
+Finding: Two problems with per-document freshness inside the bounded loop:
+ (a) Contention for the single re-plan. A document's post_id is known only AFTER round-1
+     resolve_document returns, so per-doc check_freshness must go in round 2 (the one allowed
+     re-plan). But the protocol reserves that revision for "retry resolve_document with a normalized
+     alias." The two uses collide: spend round 2 on freshness OR on alias-retry, not both. The
+     few-shot plan only freshness-checks the service, never the documents.
+ (b) Tool-budget overflow. 1 service-freshness + 1 live_lookup + N resolves + N per-doc freshness
+     = 2 + 2N tool calls. For N>=3 that is >=8; for N>=4 it exceeds the <=8 tool cap (A02).
+ Whether per-doc freshness is model-planned or system-automatic is unspecified — a coding agent must
+ guess, and G7 auto-checks "per-document freshness populated."
+Fix: State in SCOPE 5 / research_agent_v1 that per-document check_freshness runs DETERMINISTICALLY by
+the system on each corpus-resolved post_id after resolution (so it does NOT consume the model
+re-plan, freeing the re-plan for alias-retry), and define behavior when 2+2N exceeds 8 (cap +
+degrade to service-only freshness, consistent with SCOPE 15 cut-order item 4).
+Owner: __  Reviewer: __
+Closure artifact: G6 shows the re-plan used for alias-retry; G7 shows per-doc freshness populated
+without exceeding the tool budget.
+Blocks code now? No — resolve at G6/G7; clarify now (one sentence).
+Residual risk: if left, either the re-plan is unavailable for alias-retry, or per-doc freshness
+silently drops, or the <=8 budget is violated on realistic multi-doc services.
+
+N4 | MINOR | closure-gap (stale references in the LIVE status log)
+References: PROGRESS.md lines 67, 8, 23.
+Finding: PROGRESS.md is the live session log, not an archival ledger, yet:
+ - line 67 (Jul-27 checklist) still says "check_freshness ... + get_contacts + QueueEvent append" —
+   get_contacts was replaced by live_service_lookup (A06). A teammate following the checklist builds
+   the wrong tool.
+ - line 8 (context pointer) and line 23 (Gate-record header) still cite the docs as "v2"; they are
+   now v3.
+Fix: s/get_contacts/live_service_lookup on line 67; bump the v2 pointers to v3.
+Owner: __  Reviewer: __
+Blocks code now? No — trivial; do now.
+Residual risk: minor Jul-27 confusion.
+
+N5 | NIT | residual (archival contradiction, acceptable)
+References: RESOLUTIONS.md rows F03, F24, F25.
+Finding: Round-1 rows still name get_contacts as the second external call, with no inline
+"superseded by A06" note. As a historical ledger this is acceptable; read in isolation it looks like
+a contradiction with the v3 state.
+Fix (optional): append "superseded by A06" to F03/F24/F25.
+Blocks code now? No.
+
+
+FOCUSED-CHECK RESULTS (as requested)
+====================================
+
+Prompts vs schema vs loop:
+ - composer emits Envelope+AnswerOut (correct target) but its few-shot violates FR5/A10 -> N1.
+ - research budget: <=2 model calls matches SCOPE 5; the <=8 TOOL cap is breachable once per-doc
+   freshness is added for 4+ docs -> N3.
+ - prompts reference only existing tools (resolve_document, check_freshness, live_service_lookup);
+   NO get_contacts in any prompt. The only stale get_contacts is in PROGRESS.md -> N4. GOOD.
+
+Two-external-call claim:
+ - Normal path makes two genuine external calls (check_freshness + live_service_lookup); G6 auto-
+   asserts both appear in the trace. GOOD.
+ - BUT live_service_lookup has no typed result and no consumer for a newer match -> N6. This is the
+   weak point of the claim.
+
+Gold oracle:
+ - Seed has 3 illustrative cases with null placeholders, filled from core_verification.csv at G3
+   (G3 requires >=10 normal cases with factual values). Deliberate, gated deferral — acceptable.
+ - DEV/HOLDOUT split is real but nominal on a ~40-core corpus; see COULD-NOT-ASSESS.
+
+Bounded loop vs latency/TPM:
+ - TECH_PLAN 5 asserts plan(~1K)+compose(~4K)+reasoning "approximately within 8K TPM/min." This is
+   TIGHT and optimistic: 3 model calls (plan, re-plan, compose) landing in one 60-s window, plus
+   GPT-OSS reasoning + output tokens, can plausibly exceed 8K TPM and force a backoff that breaks the
+   <=20 s target. Correctly routed to measurement (G0 model_limits.json, G6 latency gate) — but the
+   plan should NOT state it closes until measured. Not a doc blocker (G6 gates it; cut-order can drop
+   per-doc freshness).
+
+Schema completeness holes: LiveLookupResult (N6), IntentResult + ResearchPlan (N2). Everything else
+(Envelope, AnswerOut/ClarifyOut/NotFoundOut/InvalidOut/ErrorOut, ServiceOut, ContactOut/ContactRecord,
+Duration, TimeEstimate/BreakdownStep, ResolvedDocument, FreshnessResult, RetrievedCandidate,
+Candidate, QueueEvent) is present with types, nullability, and enums. GOOD.
+
+Gate meetability (G0, G1b, G2, G4, G6): none set to fail by construction.
+ - G1b (>=60% contact coverage) is explicitly soft-gated ("answer valid without contacts — not a
+   blocker"). GOOD.
+ - G2 has the 40-core manual fallback. GOOD.
+ - G4 (90% top-1-or-clarify on holdout) is CI-fragile on tiny n but has the clarification escape and
+   discloses CI. Borderline, not by-construction-fail.
+ - G6 latency <=20 s is the item most likely to bite (TPM tension above) — measurable, with a
+   documented cut.
+
+
+THE SHORT LIST — fix in the documents before coding the consuming node
+=======================================================================
+
+1. N6  Add LiveLookupResult + a review-reason for a newer match (SCHEMA). Protects the two-external-
+        call compliance claim.
+2. N1  Fix the composer few-shot so the time total derives from shown evidence (composer_v1).
+        Protects the graded hallucination count.
+3. N2  Add IntentResult + ResearchPlan (tool-name enum) to SCHEMA. Unblocks models.py / G5.
+4. N3  One sentence making per-document freshness system-deterministic and reconciling it with the
+        <=8-tool budget (SCOPE 5 / research_agent_v1).
+5. N4  Correct the stale get_contacts and v2->v3 pointers in PROGRESS.md.
+
+All five are localized edits to specs/prompts — no product re-planning, no code required. None block
+G0. Estimated total effort: ~2 hours.
+
+
+WHAT COULD NOT BE ASSESSED WITHOUT A RUN
+========================================
+
+- Bounded-loop TPM/latency closure: whether plan+re-plan+compose (+reasoning) stays within 8K TPM in
+  one minute and under the <=20 s user-visible target. Measure at G0 (model_limits.json) and G6.
+  Do NOT assert it closes until measured.
+- G4 holdout viability: 90% top-1-or-clarify on a holdout carved from ~40 core services is small-n;
+  the bar could fail by sampling luck even with good retrieval. CI disclosure is planned. Measure.
+- Bakeoff outcome: Arabic fluency, schema-valid rate (>=9/10), p50 latency (<=10 s), tool-call
+  correctness for qwen3.6-27b vs gpt-oss-120b. G0.
+- Crawl field-level recall (docs/fees/authority/location/time) on JS-rendered Arabic pages. G2 spike.
+- Contact coverage vs the 60% G1b bar (already soft-gated). G1b.
+- Competitor-gap evidence for the pitch. G0/G1.
+- Team member names for owners/reviewers on every gate and artifact (F34/A21). Needs the team.
+
+
+RESOLUTION TEMPLATE (append per N-finding)
+==========================================
+
+Finding ID:
+Disposition:            ACCEPTED / PARTIALLY ACCEPTED / REJECTED WITH EVIDENCE / DEFERRED WITH RISK
+Evidence/reason:
+Files changed:
+Exact sections changed:
+New requirement/contract/gate/task:
+Owner:
+Reviewer:
+Deadline:
+Closure artifact or test:
+Residual risk:
+
+Bottom line: this plan is ready to start coding. Run G0. Fold N1-N4 and N6 into the specs before
+their Jul 26-27 consuming gates (batch them now — they are cheap). Preserve N1-N6 in RESOLUTIONS.md
+so the next reviewer can audit closure.
