@@ -30,7 +30,7 @@ fixtures).** Deadline Wed 2026-07-29 (written).
 
 | Gate | What | Status | Date | Evidence | Human sign-off |
 |---|---|---|---|---|---|
-| G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | NOT RUN | — | — | — |
+| G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic |
 | G1 | Service catalog (249 posts) | NOT RUN | — | — | — |
 | G1b | Contact catalog (/en/directory crawl) | NOT RUN | — | — | — |
 | G2 | Corpus quality (spike-gated, multi-field) | NOT RUN | — | — | — |
@@ -44,7 +44,11 @@ fixtures).** Deadline Wed 2026-07-29 (written).
 | G10 | Repo & report compliant | NOT RUN | — | — | — |
 | G11 | Demo readiness (human-only) | NOT RUN | — | — | — |
 
-**Pending human checks queue:** (empty)
+**Pending human checks queue:**
+- **G0 — Maria:** review the 5 Arabic inputs → intent classifications from `gpt-oss-120b` in the
+  bakeoff output (all 5 classified correctly: 4 service_query + 1 invalid_request for the
+  injection). Confirm the model handles Arabic correctly and bless `openai/gpt-oss-120b` as the
+  winner. Then G0 is fully signed off. (Auto part already PASS.)
 
 ## Owners (team: Gaby, Mariam, Ali, Ghina, Maria; procedure/Arabic experts = Maria + Ghina)
 Gate task owner + independent reviewer (reviewer ≠ producer). Adjust freely — these are proposed
@@ -73,9 +77,11 @@ unless a member picks one up.
 - [x] repo skeleton + `.gitignore`(secrets-first) + models.py + adapters + G0 harness + prompts → **PUBLIC repo: github.com/mariam-929/OnMyBehalf** (37 files, no secrets tracked)
 - [x] Groq key created by Mariam (in local txt OUTSIDE repo)
 - [ ] **NEXT: Mariam copies key into `dawlati-agent/.env`** (from `.env.example`), then `pip install -r requirements.txt` + `playwright install chromium`
-- [ ] Model bakeoff: `python tests/gates/check_g0.py` → qwen3.6-27b vs gpt-oss-120b (schema, Arabic, latency, limits → `data/model_limits.json`) — Owner: Gaby
-- [ ] Winner → MODEL_ID; Maria blesses Arabic outputs; freeze `==` pins; record in Decisions — Owner: Gaby / Reviewer: Maria
-- [ ] venv (ideally outside OneDrive) — deps installed
+- [x] **Model bakeoff run (Owner: Mariam)** → **gpt-oss-120b WINS** 10/10@0.55s vs qwen3.6 9/10@1.38s; limits → `data/model_limits.json` (8K TPM)
+- [x] MODEL_ID=openai/gpt-oss-120b set in `.env`; recorded in Decisions
+- [ ] **PENDING human: Maria** confirms Arabic classifications → G0 fully signed off
+- [ ] freeze `==` pins via `pip freeze` (after Maria signs off)
+- [x] venv (outside OneDrive) + deps installed + Playwright chromium
 
 ### DATA track (Jul 26)
 - [ ] `enumerate.py` → `data/catalog.json` (249: 195+24+30) → G1 — Owner: __
@@ -135,6 +141,7 @@ unless a member picks one up.
 | 2026-07-25 | Docs v2→v3 after 2nd review (A01–A30) | ~26 valid; per-model adapters, bounded loop, gold-oracle split |
 | 2026-07-25 | **get_contacts → live_service_lookup** | LIVE test: Dawlati REST exposes no contact fields; REST `?search=` verified as the 2nd external call |
 | 2026-07-25 | Freshness labels → unchanged/changed/unverified | modified_gmt detects source change, not currency (A08) — honest semantics |
+| 2026-07-25 | **MODEL_ID = openai/gpt-oss-120b** (G0 bakeoff winner; owner Mariam) | 10/10 schema-valid @0.55s p50 vs qwen3.6 9/10 @1.38s (1 json_validate_failed, Preview). GPT-OSS: strict schema, 2.5× faster, not Preview. Both 8K TPM. Also fixed adapter (strict `additionalProperties`) + UTF-8 console. |
 
 ## Findings / surprises
 
@@ -150,6 +157,12 @@ unless a member picks one up.
 
 ## Session log (newest first)
 
+- **2026-07-25 (env setup + G0 bakeoff):** Repo scaffolded + pushed (public: github.com/mariam-929/
+  OnMyBehalf); plan moved into repo `docs/` + CONTRIBUTING/SETUP/CLAUDE. Env installed outside
+  OneDrive (venv + all deps + Playwright chromium; all imports OK). Groq key wired into `.env`
+  (gitignored, validated live; both models available). **G0 bakeoff RUN (Mariam): gpt-oss-120b
+  WINS 10/10@0.55s vs qwen3.6 9/10@1.38s.** MODEL_ID set. Fixed adapter (strict additionalProperties)
+  + UTF-8 console. **Auto PASS; Maria's Arabic confirmation pending** before G0 fully closes.
 - **2026-07-25 (3rd review + N-fixes):** Third pre-code review returned START CODING (0 blockers;
   confirmed prior F/A fixes are real artifacts, not prose). Verified N1–N6 against the files, folded
   all: added LiveLookupResult + newer_version_available (N6); rewrote composer few-shot so no number
