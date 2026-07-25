@@ -221,15 +221,16 @@ unless a member picks one up.
   Ministry popups on /en/directory show opening hours, and `opening_hours` IS a field in the
   `directoryEntityData` blob that `fetch_directory.py` already fetches — the crawl just doesn't
   extract it into `ContactRecord`. Relevant: "opening times" was in the original product vision.
-  **Enhancement:** add `opening_hours` to `ContactRecord` + `fetch_directory.py` (cheap — data
-  already in hand). Owner: Ali (or quick follow-up).
+  **✅ DONE 2026-07-25:** `opening_hours` added to `ContactRecord` + `ContactOut` + extracted in
+  `fetch_directory.py` — **23 ministries carry hours** (e.g. الزراعة "8AM-2PM").
 - **2026-07-25 — the "Useful Numbers" tab contains MINISTRY hotlines (Mariam, G1b review),** so
   Ali's "no per-authority phones" is true for the popups but too strong overall: Education 1747,
   Environment 1789, Health 1214, Labor 1740, Social Affairs 1714, Communications 1775,
-  Interior-Complaints 1744 are ministry-specific. **Enhancement:** `enrich_contacts` can join these
-  15 hotlines to ministries by name so a ministry answer can surface its hotline (~7 ministries
-  gain a number). Note the source conflict Mariam spotted (Agriculture's own site says 1789, which
-  Dawlati assigns to Environment) — a nice real example for the HITL/review-queue story.
+  Interior-Complaints 1744 are ministry-specific. **✅ DONE 2026-07-25:** `fetch_directory.py` now
+  joins the tab hotlines onto ministry records (conservative name match, no false positives) —
+  **6 ministries gained a hotline** (phones 15→21/126); Interior-Complaints stays standalone (it's
+  a complaints line). Source conflict Mariam spotted (Agriculture site says 1789, Dawlati assigns
+  1789 to Environment) logged as a real HITL/review-queue example.
 - (nothing else from implementation yet — the F01 model retirement was caught by review, pre-code)
 
 ## Blockers

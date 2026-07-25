@@ -73,3 +73,25 @@ Open https://dawlati.gov.lb/en/directory/ and confirm 3 records against the live
 Also confirm the phone finding by spot-checking any ministry card for a number — expected: none.
 
 **VPN must be OFF** (see PROGRESS Findings).
+
+---
+
+## Update 2026-07-25 — two enhancements after Mariam's G1b review
+
+Mariam's live review found two things the first crawl missed; both are now captured (data already
+in hand — no new source, no scraping of ministry sites).
+
+1. **`opening_hours`** added to `ContactRecord` + `ContactOut`. It is a field in the same
+   `directoryEntityData` blob we already parse — **23 ministries now carry opening hours**
+   (e.g. وزارة الزراعة "8AM-2PM"). Recovers the "opening times" item from the original vision.
+2. **Ministry hotlines joined from the Useful Numbers tab.** The popups still have no phone, but
+   the Useful Numbers tab lists ministry-specific hotlines; these are now matched onto the ministry
+   record by the distinctive name part (conservative substring, min len 4, no false matches).
+   **6 ministries gained a hotline:** الاتصالات 1775, البيئة 1789, التربية 1747, الشؤون الاجتماعية
+   1714, الصحة العامة 1214, العمل 1740. Interior-Complaints (1744) deliberately did NOT join Interior
+   — it is a *complaints* line, not a switchboard, so it stays a standalone Useful-Numbers record.
+   `phones` filled: 15 → **21/126**. When surfaced in an answer, label these as the national
+   Useful-Numbers hotline, not a service switchboard.
+
+Note the source conflict Mariam spotted: Agriculture's own site advertises 1789 as its hotline,
+which Dawlati's Useful Numbers assigns to Environment — a real example for the HITL/review-queue story.
