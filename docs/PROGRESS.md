@@ -44,7 +44,7 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 | G4 | Retrieval calibrated (top-1 + abstention) | AUTO PASS (synthetic queries) | 2026-07-25 | θ_abs=0.58 θ_amb=0.04; HOLDOUT 96.7% top1-or-clarify, abstain 5/5, clarify 2/2, p50 0.09s; report/evidence/retrieval.md | **PENDING: Ali/Gaby** inspect misses; **re-run on REAL queries at G8** |
 | G5 | Graph skeleton (BUILD track, fixtures) | NOT RUN | — | — | n/a |
 | G6 | Agent end-to-end (gold + 2 ext calls) | NOT RUN | — | — | — |
-| G7 | Freshness & HITL | NOT RUN | — | — | — |
+| G7 | Freshness & HITL | TOOLS DONE (gate needs G6 wiring) | 2026-07-25 | check_freshness + lookup TTL, live_service_lookup (anchored), review_queue (append-only/lock/dedupe), diff_recrawl; **23/23 unit tests incl. the A14 injected-outage drill** | **PENDING: Mariam** — observe one injected-source-failure run once the graph exists |
 | G8 | Eval (claim-level gold, 24-answer audit) | NOT RUN | — | — | — |
 | G9 | UI demo-ready (RTL + offline) | NOT RUN | — | — | — |
 | G10 | Repo & report compliant | NOT RUN | — | — | — |
@@ -143,9 +143,13 @@ unless a member picks one up.
 
 ### Jul 27
 - [ ] retrieve (RRF) + research_loop (tool-calling) + compose on real index — Owner: __
-- [ ] check_freshness (REST modified_gmt) + live_service_lookup + system per-doc freshness + QueueEvent append — Owner: __
+- [x] check_freshness (+ FR6b 180d lookup TTL) + live_service_lookup (anchored to the retrieved
+      service) + QueueEvent append (`tools/review_queue.py`) — Owner: **Ali**. 23/23 unit tests.
+      **System per-doc freshness still to wire into the graph at G6** (it is a deterministic system
+      step, not a model tool call — N3) — Owner: __ (whoever does G6)
 - [ ] smoke 5 (incl. gold case, 2 external calls visible) → G6; ITERATION_LOG first entries — Owner: __
-- [ ] `diff_recrawl.py` (canonical hash) + G7 — Owner: __
+- [x] `diff_recrawl.py` (canonical hash over the re-harvest) → QueueEvents — Owner: **Ali**.
+      Re-harvest reproduces all 193 hashes exactly, so a diff means the SOURCE moved, not us
 - [ ] Streamlit shell + RTL wrapper — Owner: __
 
 ### Jul 28
@@ -246,6 +250,31 @@ unless a member picks one up.
   assumed) — expected, not a blocker.
 
 ## Session log (newest first)
+
+- **2026-07-25 (Ali — G7 tools: freshness, live lookup, review queue, recrawl diff):** Built
+  `tools/review_queue.py` (append-only JSONL + portalocker + dedupe on (type, subject, open)),
+  `tools/crawler/diff_recrawl.py` (canonical-hash diff over a re-harvest → QueueEvents), fixed
+  both external-call tools, and added **23 unit tests, all passing**, including the **A14 drill by
+  injecting a dead REST session** rather than turning off the wifi — Dawlati fails while Groq
+  stays up, which is the whole point of that drill.
+  **Two real bugs found in the scaffolded tools, both of which would have surfaced as bad
+  behaviour rather than crashes:**
+  (1) **`live_service_lookup` was not anchored to the retrieved service.** It took
+  `max(modified_gmt)` across search hits, so `live_service_lookup("بطاقة هوية")` returned
+  `is_newer=True` from post 11633 — `إصدار بطاقة تعريف للخيل`, a horse ID card that merely happened
+  to be edited later. Since `is_newer` sets `newer_version_available` + `needs_human_review` (N6),
+  **it would have filled the review queue with false flags on correct answers** — the exact
+  failure G7 exists to prevent. `post_id` now anchors both `exists` and `is_newer`, matching the
+  contract in SCHEMA_AND_CONTRACTS, which already said "for the chosen service".
+  (2) **`check_freshness` compared `live > snapshot`**, so a source moving BACKWARDS (restore from
+  backup, reverted edit, or a corrupt snapshot on our side) was reported as `unchanged`. Any
+  difference is now `changed`.
+  Also added **FR6b**: `lookup_row_freshness()` implements the 180-day TTL for lookup-table rows,
+  which had no implementation anywhere.
+  `diff_recrawl --dry` reproduces all 193 content hashes exactly on a re-harvest, so a future diff
+  means the source moved, not that our parser drifted.
+  **G7 gate cannot fully close until G6**: the "per-doc freshness is a deterministic system step
+  within the tool budget" assertion needs the graph to exist. Tools + tests are done and unblocked.
 
 - **2026-07-25 (Ali — indexer + G4 retrieval):** `tools/indexer.py` (BGE-M3 1024-dim → Chroma,
   193 vectors, 49.5s build), `tools/search_services.py` (BM25 titles + dense, RRF k=60, FR2

@@ -228,46 +228,52 @@ def fetch_ministry_services(session: requests.Session, nonce: str, slug: str) ->
     return payload.get("data", {}).get("services", [])
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--dry", action="store_true", help="fetch and report, write nothing")
-    args = ap.parse_args()
+def harvest(session: requests.Session | None = None, verbose: bool = True) -> dict:
+    """Fetch every ministry and build CorpusRecords in memory. Writes nothing.
 
+    Factored out of main() so `tools/crawler/diff_recrawl.py` can re-harvest and compare hashes
+    without duplicating the join, parsing and record-building logic — a second copy would drift
+    and the recrawl would start reporting differences that are really parser divergence.
+    """
     catalog_path = ROOT / "data" / "catalog.json"
     if not catalog_path.exists():
-        print("FAIL: data/catalog.json missing — run tools/crawler/enumerate.py first.")
-        return 1
+        raise SystemExit("FAIL: data/catalog.json missing — run tools/crawler/enumerate.py first.")
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     by_title = build_title_index(catalog)
     used_post_ids: set[int] = set()
     collisions: list[dict] = []
 
-    session = requests.Session()
-    session.headers.update({"User-Agent": UA, "X-Requested-With": "XMLHttpRequest",
-                            "Referer": GUIDE})
+    if session is None:
+        session = requests.Session()
+        session.headers.update({"User-Agent": UA, "X-Requested-With": "XMLHttpRequest",
+                                "Referer": GUIDE})
+
+    def say(*a):
+        if verbose:
+            print(*a)
 
     nonce = fetch_nonce(session)
-    print(f"nonce: {nonce}")
+    say(f"nonce: {nonce}")
     terms = fetch_ministries(session)
-    print(f"ministry terms: {len(terms)}\n")
+    say(f"ministry terms: {len(terms)}\n")
 
     crawled_at = datetime.now(timezone.utc).isoformat()
     records: list[CorpusRecord] = []
     unmatched: list[dict] = []
     empty_ministries: list[str] = []
 
-    print(f"{'ministry':36s} {'svcs':>5} {'docs':>5} {'fees':>5} {'joined':>7}")
-    print("-" * 64)
+    say(f"{'ministry':36s} {'svcs':>5} {'docs':>5} {'fees':>5} {'joined':>7}")
+    say("-" * 64)
     for term in terms:
         slug, name = term["slug"], term.get("name", "")
         try:
             services = fetch_ministry_services(session, nonce, slug)
         except Exception as e:  # noqa: BLE001
-            print(f"{slug[:35]:36s} ERROR {type(e).__name__}: {e}")
+            say(f"{slug[:35]:36s} ERROR {type(e).__name__}: {e}")
             continue
         if not services:
             empty_ministries.append(slug)
-            print(f"{slug[:35]:36s} {0:>5}")
+            say(f"{slug[:35]:36s} {0:>5}")
             time.sleep(DELAY_S)
             continue
 
@@ -318,8 +324,23 @@ def main() -> int:
                 content_hash=canonical_hash(raw_text),
                 record_status="complete" if docs else "incomplete",
             ))
-        print(f"{slug[:35]:36s} {len(services):>5} {n_docs:>5} {n_fees:>5} {n_join:>7}")
+        say(f"{slug[:35]:36s} {len(services):>5} {n_docs:>5} {n_fees:>5} {n_join:>7}")
         time.sleep(DELAY_S)
+
+    return {"records": records, "unmatched": unmatched, "collisions": collisions,
+            "empty_ministries": empty_ministries, "used_post_ids": used_post_ids,
+            "n_terms": len(terms)}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--dry", action="store_true", help="fetch and report, write nothing")
+    args = ap.parse_args()
+
+    h = harvest()
+    records, unmatched = h["records"], h["unmatched"]
+    collisions, empty_ministries = h["collisions"], h["empty_ministries"]
+    used_post_ids = h["used_post_ids"]
 
     total = len(records)
     print("\n" + "=" * 64)
@@ -341,7 +362,7 @@ def main() -> int:
         if docs_per:
             print(f"  documents per service: min {min(docs_per)}, max {max(docs_per)}, "
                   f"mean {sum(docs_per)/len(docs_per):.1f}")
-    print(f"  ministries returning 0 services: {len(empty_ministries)}/{len(terms)}")
+    print(f"  ministries returning 0 services: {len(empty_ministries)}/{h['n_terms']}")
 
     if args.dry:
         print("\n--dry: nothing written")
