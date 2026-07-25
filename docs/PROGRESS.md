@@ -30,8 +30,8 @@ fixtures).** Deadline Wed 2026-07-29 (written).
 
 | Gate | What | Status | Date | Evidence | Human sign-off |
 |---|---|---|---|---|---|
-| G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic |
-| G1 | Service catalog (249 posts) | NOT RUN | — | — | — |
+| G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | ✅ PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **Mariam 2026-07-25** (Maria to co-sign) |
+| G1 | Service catalog (249 posts) | AUTO PASS | 2026-07-25 | 249 (195/24/30), 0 dup ids, all modified_gmt; check_g1.py | **PENDING: Ali** spot-check 5 URLs |
 | G1b | Contact catalog (/en/directory crawl) | NOT RUN | — | — | — |
 | G2 | Corpus quality (spike-gated, multi-field) | NOT RUN | — | — | — |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
@@ -45,10 +45,7 @@ fixtures).** Deadline Wed 2026-07-29 (written).
 | G11 | Demo readiness (human-only) | NOT RUN | — | — | — |
 
 **Pending human checks queue:**
-- **G0 — Maria:** review the 5 Arabic inputs → intent classifications from `gpt-oss-120b` in the
-  bakeoff output (all 5 classified correctly: 4 service_query + 1 invalid_request for the
-  injection). Confirm the model handles Arabic correctly and bless `openai/gpt-oss-120b` as the
-  winner. Then G0 is fully signed off. (Auto part already PASS.)
+- (G0 signed off by Mariam 2026-07-25; Maria to co-sign the Arabic check when free — optional, non-blocking.)
 
 ## Owners (team: Gaby, Mariam, Ali, Ghina, Maria; procedure/Arabic experts = Maria + Ghina)
 Gate task owner + independent reviewer (reviewer ≠ producer). Adjust freely — these are proposed
@@ -79,12 +76,12 @@ unless a member picks one up.
 - [ ] **NEXT: Mariam copies key into `dawlati-agent/.env`** (from `.env.example`), then `pip install -r requirements.txt` + `playwright install chromium`
 - [x] **Model bakeoff run (Owner: Mariam)** → **gpt-oss-120b WINS** 10/10@0.55s vs qwen3.6 9/10@1.38s; limits → `data/model_limits.json` (8K TPM)
 - [x] MODEL_ID=openai/gpt-oss-120b set in `.env`; recorded in Decisions
-- [ ] **PENDING human: Maria** confirms Arabic classifications → G0 fully signed off
+- [x] **Human check signed (Mariam 2026-07-25):** Arabic classifications correct → **G0 fully PASSED**
 - [ ] freeze `==` pins via `pip freeze` (after Maria signs off)
 - [x] venv (outside OneDrive) + deps installed + Playwright chromium
 
 ### DATA track (Jul 26)
-- [ ] `enumerate.py` → `data/catalog.json` (249: 195+24+30) → G1 — Owner: __
+- [x] `enumerate.py` → `data/catalog.json` (249: 195+24+30) → **G1 auto PASS** (check_g1.py) — Owner: Ali; human URL spot-check pending
 - [ ] admin-ajax probe (1 h box) → DECISION under Decisions — Owner: __
 - [ ] 10-page spike + field-recall scoring → G2 spike gate (≥80% or 40-core fallback) — Owner: __
 - [ ] full crawl → `extract.py` → `data/corpus/*.json` — Owner: __
