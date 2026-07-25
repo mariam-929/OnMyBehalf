@@ -109,8 +109,14 @@ unless a member picks one up.
 - [x] **admin-ajax probe (1 h box) → DECISION recorded** — Owner: **Ali**. Service pages are empty
       (0/249); corpus is in `omsar_load_directory_ministry_services`; 92.8% have required
       documents. Evidence: `report/evidence/ajax_probe.md`. **Supersedes the page-crawl plan.**
-- [ ] **NEW (replaces spike+crawl): `fetch_directory.py` → 22 ajax POSTs → `data/corpus/*.json`**;
-      join to `catalog.json` on normalised title for `post_id`/`modified_gmt` — Owner: __
+- [x] **NEW (replaces spike+crawl): `tools/crawler/fetch_service_directory.py`** → 22 ajax POSTs →
+      **193 CorpusRecords written, all Pydantic-valid, 193 distinct post_ids** (docs 93.3%, fees
+      69.4%). Joined to `catalog.json` via `tools/text_norm.py` (shared with FR4). 2 directory
+      services have no catalog post → `data/corpus_unmatched.json`, not given a guessed id.
+      Kept separate from `fetch_directory.py`, which is still the G1b **contacts** crawl — Owner: **Ali**
+- [ ] G2 human field-check: 3 core services diffed field-by-field vs the live guide + 7 skimmed.
+      **Document splitting is heuristic** (the source mixes numbered/unnumbered items and contains
+      its own typos and mid-sentence `<br/>`s) — this check is what validates it — Owner: __
 - [ ] **NEW: rebuild core-40 + gold cases + demo queries from the 195 that exist** (passport and
       driving licence are gone) — Owner: __ (needs Maria/Ghina domain input)
 - [ ] ~~10-page spike + field-recall scoring~~ **SUPERSEDED by the probe** — there is nothing to
