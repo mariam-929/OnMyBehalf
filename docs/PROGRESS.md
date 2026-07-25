@@ -25,7 +25,7 @@ created.
 
 **Update 2026-07-25 (later — build has started):** Repo scaffolded and public. **G0 AUTO PASS**
 (gpt-oss-120b; pending Maria's Arabic sign-off). **G1 AUTO PASS** — `data/catalog.json` enumerated,
-195+24+30 = **249 exact**, denominators captured to `report/evidence/coverage.md` (pending Gaby's
+195+24+30 = **249 exact**, denominators captured to `report/evidence/coverage.md` (pending Mariam's
 5-URL check). Second dev env (Ali) up on Python 3.13. Known gotcha: **Dawlati Cloudflare 403s VPN
 IPs** — see Findings. **Next action: DATA track — admin-ajax probe (1 h box) → 10-page spike +
 `data/spike_gold.json` → field-recall scoring → G2**; BUILD track (graph skeleton on synthetic
@@ -37,7 +37,7 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 | Gate | What | Status | Date | Evidence | Human sign-off |
 |---|---|---|---|---|---|
 | G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic |
-| G1 | Service catalog (249 posts) | AUTO PASS | 2026-07-25 | data/catalog.json — 195+24+30=249 exact, 0 dup ids, all modified_gmt | **PENDING: Gaby** opens 5 URLs |
+| G1 | Service catalog (249 posts) | AUTO PASS | 2026-07-25 | data/catalog.json — 195+24+30=249 exact, 0 dup ids, all modified_gmt | **PENDING: Mariam** opens 5 URLs |
 | G1b | Contact catalog (/en/directory crawl) | NOT RUN | — | — | — |
 | G2 | Corpus quality (spike-gated, multi-field) | NOT RUN | — | — | — |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
@@ -55,7 +55,7 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
   bakeoff output (all 5 classified correctly: 4 service_query + 1 invalid_request for the
   injection). Confirm the model handles Arabic correctly and bless `openai/gpt-oss-120b` as the
   winner. Then G0 is fully signed off. (Auto part already PASS.)
-- **G1 — Gaby:** open these 5 catalog URLs in a browser; confirm each loads and its Arabic title
+- **G1 — Mariam:** open these 5 catalog URLs in a browser; confirm each loads and its Arabic title
   matches `data/catalog.json`. Then G1 is fully signed off. (Auto part already PASS.)
   1. `/ministry_service_ser/…` إصدار شهادات صحية لتصدير الحيوانات أو المشتقات الحيوانية
   2. `/en/useful-numbers-post/ogero/` Ogero
@@ -72,7 +72,7 @@ unless a member picks one up.
 | Gate | Owner | Reviewer | Rationale |
 |---|---|---|---|
 | G0 bakeoff | Gaby | Maria | Maria reads the 5 Arabic outputs to bless the winner |
-| G1 catalog | Ali | Gaby | |
+| G1 catalog | Ali | **Mariam** | reassigned 2026-07-25 (was Gaby) — Gaby not yet a repo collaborator |
 | G1b contacts | Ali | Ghina | |
 | G2 corpus + field-check | **Maria** | **Ghina** | domain experts verify extraction vs live pages |
 | G3 core verification (40) | **Maria + Ghina** | each other | split 40 ≈ 8 each across all 5; experts own accuracy |
@@ -99,7 +99,7 @@ unless a member picks one up.
 
 ### DATA track (Jul 26)
 - [x] `enumerate.py` → `data/catalog.json` (249: 195+24+30 — **exact**) → G1 AUTO PASS — Owner: **Ali**
-      (pending Gaby's 5-URL human check)
+      (pending Mariam's 5-URL human check)
 - [ ] admin-ajax probe (1 h box) → DECISION under Decisions — Owner: __
 - [ ] 10-page spike + field-recall scoring → G2 spike gate (≥80% or 40-core fallback) — Owner: __
 - [ ] full crawl → `extract.py` → `data/corpus/*.json` — Owner: __
@@ -187,7 +187,9 @@ unless a member picks one up.
   403 on every Dawlati path — cause was a VPN connection, not code/UA (logged under Findings).**
   VPN off → **G1 run: `enumerate.py` → `data/catalog.json`, 195+24+30 = 249 exact**, 0 dup ids, all
   rows carry modified_gmt/title/https url → **G1 AUTO PASS**; denominators captured to
-  `report/evidence/coverage.md`. Pending human: Gaby opens the 5 sampled URLs.
+  `report/evidence/coverage.md`. Pending human: **Mariam** opens the 5 sampled URLs (G1 reviewer
+  reassigned from Gaby, who is not yet a repo collaborator; reviewer ≠ producer still holds).
+  PR: https://github.com/mariam-929/OnMyBehalf/pull/1
   **Next: admin-ajax probe (1 h box) → 10-page spike + `data/spike_gold.json` → G2.**
 - **2026-07-25 (env setup + G0 bakeoff):** Repo scaffolded + pushed (public: github.com/mariam-929/
   OnMyBehalf); plan moved into repo `docs/` + CONTRIBUTING/SETUP/CLAUDE. Env installed outside
