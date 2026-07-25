@@ -10,10 +10,16 @@ Playwright. It is not. Both datasets are embedded in the page HTML, so plain `re
   2. `article.directory-number-card` — the "Useful Numbers" tab: 15 national hotlines
      (Consumer protection 1739, …) as title + `tel:` link.
 
-MEASURED LIMITATION (2026-07-25): the directory publishes **no per-authority phone numbers**.
-Only the 15 national hotlines have phones at all; ministries have addresses but no switchboard.
-So `ContactRecord.phones` is empty for every ministry, and contact enrichment stays best-effort
-exactly as SCOPE §15 anticipated — an answer is still valid without contacts.
+MEASURED LIMITATION (2026-07-25): the directory publishes **no ministry switchboard numbers**.
+The ministry popups carry location, official site, opening hours and portal links — no phone.
+The only phones on the site are the 15 national Useful-Numbers hotlines.
+
+Updated after Mariam's G1b review: 6 of those hotlines are ministry-specific and are now joined
+onto their ministry record (`phones` filled 15 → 21/126). **They remain national hotlines, not
+service switchboards, and must be labelled that way when surfaced in an answer.** The Interior
+complaints line (1744) is deliberately NOT joined to Interior — it is a complaints channel, not a
+contact point for a procedure. Contact enrichment therefore stays best-effort exactly as SCOPE §15
+anticipated: an answer is still valid without contacts.
 
 Bilingual join is on `official_domain` (minus `www.`), NOT on `key`: Polylang gives the EN and AR
 translations different post ids (Ministry of Agriculture is 9773 EN / 9784 AR).
