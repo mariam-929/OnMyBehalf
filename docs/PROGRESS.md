@@ -36,8 +36,8 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 
 | Gate | What | Status | Date | Evidence | Human sign-off |
 |---|---|---|---|---|---|
-| G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic |
-| G1 | Service catalog (249 posts) | AUTO PASS | 2026-07-25 | data/catalog.json — 195+24+30=249 exact, 0 dup ids, all modified_gmt | **PENDING: Mariam** opens 5 URLs |
+| G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic (Mariam read them 2026-07-25, but she RAN the bakeoff — producer ≠ reviewer, so it does not close the gate) |
+| G1 | Service catalog (249 posts) | AUTO PASS | 2026-07-25 | data/catalog.json — 249 (195/24/30), 0 dup ids, all modified_gmt; `check_g1.py` 7/7; report/evidence/coverage.md | **PENDING: Mariam** opens 5 URLs |
 | G1b | Contact catalog (/en/directory crawl) | NOT RUN | — | — | — |
 | G2 | Corpus quality (spike-gated, multi-field) | NOT RUN | — | — | — |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
@@ -51,10 +51,14 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 | G11 | Demo readiness (human-only) | NOT RUN | — | — | — |
 
 **Pending human checks queue:**
-- **G0 — Maria:** review the 5 Arabic inputs → intent classifications from `gpt-oss-120b` in the
-  bakeoff output (all 5 classified correctly: 4 service_query + 1 invalid_request for the
-  injection). Confirm the model handles Arabic correctly and bless `openai/gpt-oss-120b` as the
-  winner. Then G0 is fully signed off. (Auto part already PASS.)
+- **G0 — Maria (STILL REQUIRED):** review the 5 Arabic inputs → intent classifications from
+  `gpt-oss-120b` in the bakeoff output (all 5 classified correctly: 4 service_query +
+  1 invalid_request for the injection). Confirm the model handles Arabic correctly and bless
+  `openai/gpt-oss-120b` as the winner. Then G0 is fully signed off. (Auto part already PASS.)
+  **Note 2026-07-25:** Mariam marked this signed by herself, but she ran the bakeoff — VERIFICATION
+  requires reviewer ≠ producer, and this check is specifically an Arabic-quality read (why the
+  owners table names Maria, a designated Arabic expert). Her read is recorded as a producer
+  self-check; the gate stays open until Maria signs. Not blocking any work in the meantime.
 - **G1 — Mariam:** open these 5 catalog URLs in a browser; confirm each loads and its Arabic title
   matches `data/catalog.json`. Then G1 is fully signed off. (Auto part already PASS.)
   1. `/ministry_service_ser/…` إصدار شهادات صحية لتصدير الحيوانات أو المشتقات الحيوانية
@@ -93,13 +97,15 @@ unless a member picks one up.
 - [ ] **NEXT: Mariam copies key into `dawlati-agent/.env`** (from `.env.example`), then `pip install -r requirements.txt` + `playwright install chromium`
 - [x] **Model bakeoff run (Owner: Mariam)** → **gpt-oss-120b WINS** 10/10@0.55s vs qwen3.6 9/10@1.38s; limits → `data/model_limits.json` (8K TPM)
 - [x] MODEL_ID=openai/gpt-oss-120b set in `.env`; recorded in Decisions
-- [ ] **PENDING human: Maria** confirms Arabic classifications → G0 fully signed off
+- [ ] **PENDING human: Maria** confirms Arabic classifications → G0 fully signed off. (Mariam read
+      them 2026-07-25 and found them correct, but she ran the bakeoff — recorded as a producer
+      self-check, not the sign-off. Auto part already PASS; nothing is blocked.)
 - [ ] freeze `==` pins via `pip freeze` (after Maria signs off)
 - [x] venv (outside OneDrive) + deps installed + Playwright chromium
 
 ### DATA track (Jul 26)
-- [x] `enumerate.py` → `data/catalog.json` (249: 195+24+30 — **exact**) → G1 AUTO PASS — Owner: **Ali**
-      (pending Mariam's 5-URL human check)
+- [x] `enumerate.py` → `data/catalog.json` (249: 195+24+30 — **exact**) → **G1 AUTO PASS**, confirmed
+      independently by `tests/gates/check_g1.py` (7/7) — Owner: **Ali** (pending Mariam's 5-URL check)
 - [ ] admin-ajax probe (1 h box) → DECISION under Decisions — Owner: __
 - [ ] 10-page spike + field-recall scoring → G2 spike gate (≥80% or 40-core fallback) — Owner: __
 - [ ] full crawl → `extract.py` → `data/corpus/*.json` — Owner: __
@@ -178,6 +184,21 @@ unless a member picks one up.
   assumed) — expected, not a blocker.
 
 ## Session log (newest first)
+
+- **2026-07-25 (Ali — merged Mariam's G0/G1 work into `data-crawl`):** Mariam and Ali ran G1
+  independently and **agree exactly: 249 = 195/24/30, 0 dup ids, all modified_gmt.** Her
+  `tests/gates/check_g1.py` passes **7/7 against Ali's `data/catalog.json`** — two independent
+  paths to the same result, which is a stronger G1 than either alone. Merged (conflict in this
+  file, resolved). Three corrections made in the merge, all open to challenge in PR #1:
+  (1) **G0 restored to AUTO PASS + PENDING: Maria** — Mariam had marked the human check signed by
+  herself, but she ran the bakeoff; VERIFICATION requires reviewer ≠ producer and this check is an
+  Arabic-quality read that the owners table assigns to Maria. Her read is kept in the record as a
+  producer self-check. Nothing is blocked by leaving it open.
+  (2) **G1 reviewer = Mariam, not Ali** — her version assigned the check to Ali, who produced the
+  catalog. Same rule, opposite direction.
+  (3) **`check_g1.py` sample seeded (SAMPLE_SEED=7)** — it used unseeded `random.sample`, so the
+  reviewer's 5 URLs changed every run and could not be re-verified or cited. Now reproducible and
+  identical to the 5 recorded in `report/evidence/coverage.md`.
 
 - **2026-07-25 (Ali — env setup + G1 catalog):** Second dev environment stood up (venv
   `~/venvs/OnMyBehalf` on **Python 3.13**, outside OneDrive; 3.14 is too new for chromadb/torch
