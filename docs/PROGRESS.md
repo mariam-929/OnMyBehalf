@@ -38,7 +38,7 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 |---|---|---|---|---|---|
 | G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic (Mariam read them 2026-07-25, but she RAN the bakeoff — producer ≠ reviewer, so it does not close the gate) |
 | G1 | Service catalog (249 posts) | ✅ PASS | 2026-07-25 | data/catalog.json — 249 (195/24/30), 0 dup ids, all modified_gmt; `check_g1.py` 7/7; report/evidence/coverage.md | **Mariam 2026-07-25** (5 URLs load, titles match) |
-| G1b | Contact catalog (/en/directory crawl) | AUTO PASS | 2026-07-25 | 126 ContactRecords, all valid; coverage 3/3 corpus authorities (100%) + 21/22 taxonomy (95%) vs ≥60% gate; report/evidence/contacts_coverage.md | **PENDING: Ghina** checks 3 vs live |
+| G1b | Contact catalog (/en/directory crawl) | ✅ PASS | 2026-07-25 | 126 ContactRecords, all valid; coverage 100%/95%; contacts_coverage.md | **Mariam 2026-07-25** (verified live: ministries have location+site+hours+portals, no phone; 15 hotlines in Useful Numbers tab). 2 enhancement findings logged |
 | G2 | Corpus quality (REFRAMED: ajax, not crawl) | AUTO PASS (integrity) | 2026-07-25 | 193 corpus records generated, 180 complete, 0 overwrite, check_g2.py | **PENDING: Maria/Ghina** verify spike_gold + field-check 3 |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
 | G4 | Retrieval calibrated (top-1 + abstention) | NOT RUN | — | — | — |
@@ -64,10 +64,10 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
   requires reviewer ≠ producer, and this check is specifically an Arabic-quality read (why the
   owners table names Maria, a designated Arabic expert). Her read is recorded as a producer
   self-check; the gate stays open until Maria signs. Not blocking any work in the meantime.
-- **G1b — Ghina:** open https://dawlati.gov.lb/en/directory/ and confirm 3 contact records against
-  the live page (the three ministries listed in `report/evidence/contacts_coverage.md`), and
-  spot-check any ministry card for a phone number — expected: **none exist**. Then G1b is fully
-  signed off. (Auto part already PASS.) **VPN must be OFF, see Findings.**
+- ~~G1b — Ghina~~ ✅ **SIGNED by Mariam 2026-07-25** (reviewer ≠ producer; Ali produced). Verified
+  live: ministry popups have location + official site + opening hours + portal links but **no phone**;
+  the 15 hotlines live in a separate "Useful Numbers" tab. Crawl accurate. **G1b FULLY PASSED.**
+  Two enhancement findings logged below (opening hours; ministry hotlines).
 - ~~G1 — Mariam~~ ✅ **SIGNED 2026-07-25:** all 5 URLs load, Arabic titles match the catalog
   (pages are sparse — title only — as expected since content is in the ajax endpoint). **G1 FULLY PASSED.**
 
@@ -217,6 +217,19 @@ unless a member picks one up.
 - **2026-07-25 — the ajax payload has no `post_id` and no `modified_gmt`**, which FR6
   `check_freshness(post_id)` requires. Directory services must be joined to `data/catalog.json` on
   normalised title; unmatched ⇒ `unverified`. Needs a decision at G2/G7.
+- **2026-07-25 — opening hours are published per ministry but NOT captured (Mariam, G1b review).**
+  Ministry popups on /en/directory show opening hours, and `opening_hours` IS a field in the
+  `directoryEntityData` blob that `fetch_directory.py` already fetches — the crawl just doesn't
+  extract it into `ContactRecord`. Relevant: "opening times" was in the original product vision.
+  **Enhancement:** add `opening_hours` to `ContactRecord` + `fetch_directory.py` (cheap — data
+  already in hand). Owner: Ali (or quick follow-up).
+- **2026-07-25 — the "Useful Numbers" tab contains MINISTRY hotlines (Mariam, G1b review),** so
+  Ali's "no per-authority phones" is true for the popups but too strong overall: Education 1747,
+  Environment 1789, Health 1214, Labor 1740, Social Affairs 1714, Communications 1775,
+  Interior-Complaints 1744 are ministry-specific. **Enhancement:** `enrich_contacts` can join these
+  15 hotlines to ministries by name so a ministry answer can surface its hotline (~7 ministries
+  gain a number). Note the source conflict Mariam spotted (Agriculture's own site says 1789, which
+  Dawlati assigns to Environment) — a nice real example for the HITL/review-queue story.
 - (nothing else from implementation yet — the F01 model retirement was caught by review, pre-code)
 
 ## Blockers
