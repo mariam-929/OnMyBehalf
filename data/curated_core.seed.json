@@ -1,0 +1,11 @@
+{
+  "_comment": "40 hand-verified core services (SCOPE §6). post_ids + en_alias filled from data/catalog.json at G3. Drives FR7 core confidence gating + eval gold. This seed lists the CANDIDATE procedures; confirm/replace against the real catalog on Jul 26.",
+  "candidates": [
+    "passport issue", "passport renewal", "national ID", "individual civil extract",
+    "family civil extract", "criminal record", "birth registration", "marriage registration",
+    "death registration", "driving license issue", "driving license renewal",
+    "vehicle registration", "vehicle transfer", "work permit", "residence permit",
+    "commercial register", "mukhtar attestation", "building permit", "NSSF registration"
+  ],
+  "core": []
+}

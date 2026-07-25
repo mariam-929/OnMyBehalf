@@ -1,0 +1,38 @@
+# ---- secrets (NEVER commit) ----
+.env
+.env.*
+!.env.example
+*.key
+*secret*
+*apikey*
+*api_key*
+# any loose key text files, wherever they land
+groq*.txt
+key*.txt
+
+# ---- data / models / caches (churn OneDrive; regenerated) ----
+data/chroma/
+data/corpus/
+data/catalog.json
+data/review_queue.jsonl
+logs/
+*.log
+report/evidence/demo_cache/
+
+# ---- python ----
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# ---- playwright / node ----
+ms-playwright/
+node_modules/
+
+# ---- os / editor ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

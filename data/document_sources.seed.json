@@ -1,0 +1,14 @@
+{
+  "_comment": "Lookup table (SCOPE FR4). ≥20 rows filled + source-checked at G3 by Maria/Ghina. Each row: where a required document is obtained when it isn't its own corpus service. verified_on drives the 180d TTL (A08).",
+  "rows": [
+    {"doc_name_ar": "إخراج قيد إفرادي", "doc_name_en": "Individual civil status extract",
+     "issuing_authority": "دائرة الأحوال الشخصية / المختار", "where": "Personal Status Dept or mukhtar",
+     "notes": "", "source_url": "", "verified_on": ""},
+    {"doc_name_ar": "إخراج قيد عائلي", "doc_name_en": "Family civil status extract",
+     "issuing_authority": "دائرة الأحوال الشخصية", "where": "Personal Status Dept",
+     "notes": "", "source_url": "", "verified_on": ""},
+    {"doc_name_ar": "سجل عدلي", "doc_name_en": "Criminal record extract",
+     "issuing_authority": "وزارة العدل", "where": "Ministry of Justice",
+     "notes": "", "source_url": "", "verified_on": ""}
+  ]
+}
