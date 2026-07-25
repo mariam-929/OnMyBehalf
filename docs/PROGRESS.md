@@ -37,7 +37,7 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 | Gate | What | Status | Date | Evidence | Human sign-off |
 |---|---|---|---|---|---|
 | G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic (Mariam read them 2026-07-25, but she RAN the bakeoff — producer ≠ reviewer, so it does not close the gate) |
-| G1 | Service catalog (249 posts) | AUTO PASS | 2026-07-25 | data/catalog.json — 249 (195/24/30), 0 dup ids, all modified_gmt; `check_g1.py` 7/7; report/evidence/coverage.md | **PENDING: Mariam** opens 5 URLs |
+| G1 | Service catalog (249 posts) | ✅ PASS | 2026-07-25 | data/catalog.json — 249 (195/24/30), 0 dup ids, all modified_gmt; `check_g1.py` 7/7; report/evidence/coverage.md | **Mariam 2026-07-25** (5 URLs load, titles match) |
 | G1b | Contact catalog (/en/directory crawl) | AUTO PASS | 2026-07-25 | 126 ContactRecords, all valid; coverage 3/3 corpus authorities (100%) + 21/22 taxonomy (95%) vs ≥60% gate; report/evidence/contacts_coverage.md | **PENDING: Ghina** checks 3 vs live |
 | G2 | Corpus quality (REFRAMED: ajax, not crawl) | AUTO PASS (integrity) | 2026-07-25 | 193 corpus records generated, 180 complete, 0 overwrite, check_g2.py | **PENDING: Maria/Ghina** verify spike_gold + field-check 3 |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
@@ -68,14 +68,8 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
   the live page (the three ministries listed in `report/evidence/contacts_coverage.md`), and
   spot-check any ministry card for a phone number — expected: **none exist**. Then G1b is fully
   signed off. (Auto part already PASS.) **VPN must be OFF, see Findings.**
-- **G1 — Mariam:** open these 5 catalog URLs in a browser; confirm each loads and its Arabic title
-  matches `data/catalog.json`. Then G1 is fully signed off. (Auto part already PASS.)
-  1. `/ministry_service_ser/…` إصدار شهادات صحية لتصدير الحيوانات أو المشتقات الحيوانية
-  2. `/en/useful-numbers-post/ogero/` Ogero
-  3. `/ministry_service_ser/…` رخصة رعي في الغابات
-  4. `/ministry_service_ser/…` إعطاء رخصة صيد الأسماك البحرية (بواسطة مركب)
-  5. `/ministry_service_ser/…` تصحيح أو إضافة اسم على لوائح الشطب
-  (full URLs in `report/evidence/coverage.md`) — **VPN must be OFF, see Findings.**
+- ~~G1 — Mariam~~ ✅ **SIGNED 2026-07-25:** all 5 URLs load, Arabic titles match the catalog
+  (pages are sparse — title only — as expected since content is in the ajax endpoint). **G1 FULLY PASSED.**
 
 ## Owners (team: Gaby, Mariam, Ali, Ghina, Maria; procedure/Arabic experts = Maria + Ghina)
 Gate task owner + independent reviewer (reviewer ≠ producer). Adjust freely — these are proposed
