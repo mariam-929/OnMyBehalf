@@ -41,7 +41,7 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 | G1b | Contact catalog (/en/directory crawl) | ✅ PASS | 2026-07-25 | 126 ContactRecords, all valid; coverage 100%/95%; contacts_coverage.md | **Mariam 2026-07-25** (verified live: ministries have location+site+hours+portals, no phone; 15 hotlines in Useful Numbers tab). 2 enhancement findings logged |
 | G2 | Corpus quality (REFRAMED: ajax, not crawl) | AUTO PASS (integrity) | 2026-07-25 | 193 corpus records generated, 180 complete, 0 overwrite, check_g2.py | **PENDING: Maria/Ghina** verify spike_gold + field-check 3 |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
-| G4 | Retrieval calibrated (top-1 + abstention) | NOT RUN | — | — | — |
+| G4 | Retrieval calibrated (top-1 + abstention) | AUTO PASS (synthetic queries) | 2026-07-25 | θ_abs=0.58 θ_amb=0.04; HOLDOUT 96.7% top1-or-clarify, abstain 5/5, clarify 2/2, p50 0.09s; report/evidence/retrieval.md | **PENDING: Ali/Gaby** inspect misses; **re-run on REAL queries at G8** |
 | G5 | Graph skeleton (BUILD track, fixtures) | NOT RUN | — | — | n/a |
 | G6 | Agent end-to-end (gold + 2 ext calls) | NOT RUN | — | — | — |
 | G7 | Freshness & HITL | NOT RUN | — | — | — |
@@ -130,7 +130,11 @@ unless a member picks one up.
 - [ ] ~~full crawl → `extract.py`~~ **SUPERSEDED** — no HTML extraction needed; `fetch_render.py`
       not needed for services (still needed for the /en/directory contacts crawl, G1b) — Owner: __
 - [ ] `core_verification.csv` (40 rows, split across team) + `document_sources.json` (≥20) → G3 — Owner: __
-- [ ] `indexer.py` → Chroma; G4 calibration on 10-query gold → BGE-M3 vs e5-base — Owner: __
+- [x] `indexer.py` → Chroma (193 vectors, BGE-M3, 49.5s build) + `search_services.py` (RRF k=60)
+      + `tests/gates/check_g4.py` → **G4 AUTO PASS** on a DEV/HOLDOUT split — Owner: **Ali**
+      (nominally Gaby's stream — taken because it was the critical path; **tell Gaby before she
+      duplicates it**). e5-base comparison NOT run: bge-m3 cleared every criterion, so the
+      fallback was not needed — Owner: __ if anyone wants the comparison for the report
 
 ### BUILD track (Jul 26, fixtures from spike)
 - [ ] `agents/models.py` — all typed contracts + discriminated responses (F07/F08) — Owner: __
@@ -161,7 +165,7 @@ unless a member picks one up.
 |---|---|---|---|---|
 | Model decision | bakeoff numbers table | G0 | report/evidence/bakeoff.md | [x] both runs + the reproducibility caveat + the French-visa refusal difference |
 | Coverage denominators | catalog/fetched/extracted/verified counts | G1–G3 | report/evidence/coverage.md | [~] catalog=249 captured at G1; fetched/extracted/verified pending G2–G3 |
-| Retrieval quality | G4 gold results + θ values | G4 | report/evidence/retrieval.md | [ ] |
+| Retrieval quality | G4 gold results + θ values | G4 | report/evidence/retrieval.md | [x] θ values, holdout numbers, both design corrections, synthetic caveat |
 | Agent loop / 2 ext calls | trace excerpt (JSONL) | G6 | report/evidence/trace_normal.json | [ ] |
 | 3 prompt iterations | ITERATION_LOG diffs | Jul 27–28 | prompts/ITERATION_LOG.md | [ ] |
 | 2 failure analyses | narratives + before/after | as they occur | report/evidence/failures.md | [ ] |
@@ -242,6 +246,31 @@ unless a member picks one up.
   assumed) — expected, not a blocker.
 
 ## Session log (newest first)
+
+- **2026-07-25 (Ali — indexer + G4 retrieval):** `tools/indexer.py` (BGE-M3 1024-dim → Chroma,
+  193 vectors, 49.5s build), `tools/search_services.py` (BM25 titles + dense, RRF k=60, FR2
+  outcome), `tests/gates/check_g4.py` (DEV/HOLDOUT calibration). **G4 AUTO PASS:** θ_abs=0.58,
+  θ_amb=0.04, holdout **96.7%** top-1-or-clarify, known-out abstain **5/5**, under-specified
+  clarify **2/2**, p50 latency **0.09s**. Evidence: `report/evidence/retrieval.md`.
+  **Two design corrections, both forced by measured failures — worth the report's method section:**
+  (1) **RRF ranks, cosine decides.** Thresholding on the RRF score (the literal plan) does not
+  work: RRF is bounded and encodes *whether both channels returned a doc*, not relevance. Under
+  it, "تجديد جواز السفر" returned **`found` → `إصدار جواز سفر للخيل`, a horse passport**, and the
+  out-of-jurisdiction French-visa query scored higher than many correct hits. Abstention/ambiguity
+  now read dense cosine; both queries correctly abstain.
+  (2) **BM25 gated to positive scores.** An English query matches no Arabic title but BM25 still
+  ranks every doc, and RRF treated that garbage rank-1 as authoritative — "how do I get an ID card"
+  returned an ISBN request, with the correct `بطاقة هوية` at #3 despite cos 0.610, and a doc at
+  **cos 0.000** scoring 0.0164. Gated, English queries run dense-only and resolve correctly.
+  **Two caveats that MUST reach the report:** the query set is **synthetic** (templated from
+  titles — an upper bound and regression guard, not measured quality; re-run on real queries at
+  G8), and the objective **counts a clarification as equal to a correct top-1**, which biases the
+  agent toward asking rather than answering — θ_amb=0.02 gives 92.2% top-1 vs 84.4% at the chosen
+  0.04. That is a product call for the team; it is one value in `data/retrieval_thresholds.json`.
+  **Chose bge-m3 without running the e5-base comparison** — it cleared every criterion, so the
+  fallback was unnecessary; flagged in case the report wants the comparison anyway.
+  **Coordination note: this is Gaby's stream on the owners table.** Taken because it was the
+  critical path; Gaby must be told before she duplicates it, as happened with G1.
 
 - **2026-07-25 (Ali — G0 reproduced independently + bakeoff evidence captured):** Groq key wired
   into Ali's `.env` (gitignored; verified never tracked, absent from history). Ran

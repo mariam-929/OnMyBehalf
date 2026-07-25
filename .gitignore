@@ -12,6 +12,7 @@ key*.txt
 
 # ---- data / models / caches (churn OneDrive; regenerated) ----
 data/chroma/
+data/index_info.json
 data/corpus/
 data/corpus_unmatched.json
 data/contacts.json
