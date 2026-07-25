@@ -106,9 +106,20 @@ unless a member picks one up.
 ### DATA track (Jul 26)
 - [x] `enumerate.py` → `data/catalog.json` (249: 195+24+30 — **exact**) → **G1 AUTO PASS**, confirmed
       independently by `tests/gates/check_g1.py` (7/7) — Owner: **Ali** (pending Mariam's 5-URL check)
-- [ ] admin-ajax probe (1 h box) → DECISION under Decisions — Owner: __
-- [ ] 10-page spike + field-recall scoring → G2 spike gate (≥80% or 40-core fallback) — Owner: __
-- [ ] full crawl → `extract.py` → `data/corpus/*.json` — Owner: __
+- [x] **admin-ajax probe (1 h box) → DECISION recorded** — Owner: **Ali**. Service pages are empty
+      (0/249); corpus is in `omsar_load_directory_ministry_services`; 92.8% have required
+      documents. Evidence: `report/evidence/ajax_probe.md`. **Supersedes the page-crawl plan.**
+- [ ] **NEW (replaces spike+crawl): `fetch_directory.py` → 22 ajax POSTs → `data/corpus/*.json`**;
+      join to `catalog.json` on normalised title for `post_id`/`modified_gmt` — Owner: __
+- [ ] **NEW: rebuild core-40 + gold cases + demo queries from the 195 that exist** (passport and
+      driving licence are gone) — Owner: __ (needs Maria/Ghina domain input)
+- [ ] ~~10-page spike + field-recall scoring~~ **SUPERSEDED by the probe** — there is nothing to
+      spike: the pages are empty and the ajax payload is already structured. G2 should instead gate
+      on field fill-rate in the harvested directory (measured: docs 92.8%, fees 69.7% — already
+      clears the ≥80% documents bar) + a human field-by-field check of 3 core services vs the live
+      guide — Owner: __
+- [ ] ~~full crawl → `extract.py`~~ **SUPERSEDED** — no HTML extraction needed; `fetch_render.py`
+      not needed for services (still needed for the /en/directory contacts crawl, G1b) — Owner: __
 - [ ] `core_verification.csv` (40 rows, split across team) + `document_sources.json` (≥20) → G3 — Owner: __
 - [ ] `indexer.py` → Chroma; G4 calibration on 10-query gold → BGE-M3 vs e5-base — Owner: __
 
@@ -162,6 +173,8 @@ unless a member picks one up.
 | 2026-07-25 | Docs v2→v3 after 2nd review (A01–A30) | ~26 valid; per-model adapters, bounded loop, gold-oracle split |
 | 2026-07-25 | **get_contacts → live_service_lookup** | LIVE test: Dawlati REST exposes no contact fields; REST `?search=` verified as the 2nd external call |
 | 2026-07-25 | Freshness labels → unchanged/changed/unverified | modified_gmt detects source change, not currency (A08) — honest semantics |
+| 2026-07-25 | **Crawl the directory admin-ajax endpoint; do NOT crawl the 219 service pages** (admin-ajax probe, owner Ali, 1 h box) | The service pages are EMPTY: 0/249 posts have REST content, and a rendered page yields 431 chars of nav/title/footer with no section keywords and no content XHR. A page crawl would have produced 219 empty records and failed the G2 spike at ~0% recall. Content lives in `admin-ajax.php action=omsar_load_directory_ministry_services` (nonce from `var ajaxConfig`, not per-user → plain `requests` works), returning `required_documents_html` / `fees_html` / `notes_html` / `doc_url` per service. **181/195 (92.8%) have required documents; 136/195 (69.7%) have fees.** 22 POSTs ≈ 30 s replaces a 219-page Playwright crawl. Evidence: `report/evidence/ajax_probe.md` |
+| 2026-07-25 | **Core-40, gold cases and demo queries must be rebuilt from the 195 services that exist** | Only 3/22 ministries are populated (agriculture 115, interior 53, culture 27) — Dawlati's own notice says it is still adding documents. Planned core services **passport renewal and driving licence do not exist** (the only «جواز سفر» hit is a horse passport). `gold_claims.seed.json:normal_passport_en` and the SCOPE §9 demo query are unanswerable as written. Civil-registry services (هوية، تسجيل ولادة/زواج/وفاة، بيان قيد) DO exist and are strong replacements |
 | 2026-07-25 | **MODEL_ID = openai/gpt-oss-120b** (G0 bakeoff winner; owner Mariam) | 10/10 schema-valid @0.55s p50 vs qwen3.6 9/10 @1.38s (1 json_validate_failed, Preview). GPT-OSS: strict schema, 2.5× faster, not Preview. Both 8K TPM. Also fixed adapter (strict `additionalProperties`) + UTF-8 console. |
 
 ## Findings / surprises
@@ -173,6 +186,26 @@ unless a member picks one up.
   the code, or the network. VPN off → 200 on all three post types immediately. **If any Dawlati call
    403s, check the VPN before debugging the code.** (The browser-UA header in `enumerate.py` is still
   required — Cloudflare also 403s default clients — so both conditions must hold.)
+- **2026-07-25 — the Dawlati service PAGES are empty; the content is in a directory ajax endpoint
+  (Ali, admin-ajax probe).** The 2026-07-24 recon recorded detail pages as "JS-rendered", which
+  read as *content arrives via JS*. It is not: **0 of 249 posts have any REST content**, and a
+  fully rendered page yields 431 chars (nav/title/share/footer) with every section keyword absent
+  and no content XHR at all. The real corpus is behind
+  `admin-ajax action=omsar_load_directory_ministry_services`, one call per ministry, returning
+  structured `required_documents_html` / `fees_html` / `notes_html` / `doc_url`.
+  **181/195 (92.8%) carry required documents.** Full numbers: `report/evidence/ajax_probe.md`.
+- **2026-07-25 — only 3 of 22 ministries are populated** (agriculture 115, interior 53, culture 27;
+  the other 19 return 0). Dawlati says so itself on the guide page: «نعمل تدريجياً على إضافة
+  النماذج الرسمية والوثائق المطلوبة». This is a property of the SOURCE, not of our crawl — report
+  it that way, and do not present 195 as national coverage.
+- **2026-07-25 — passport renewal and driving licence DO NOT EXIST in the directory.** Both are in
+  `curated_core.seed.json`; passport renewal is also a `gold_claims.seed.json` case, a G0 bakeoff
+  fixture and the SCOPE §9 demo query. The only «جواز سفر» match is `إصدار جواز سفر للخيل` — a
+  horse passport. Civil-registry services (بطاقة هوية، تسجيل ولادة/زواج/وفاة/طلاق، بيان قيد عائلي
+  وإفرادي) do exist and are the natural replacement set.
+- **2026-07-25 — the ajax payload has no `post_id` and no `modified_gmt`**, which FR6
+  `check_freshness(post_id)` requires. Directory services must be joined to `data/catalog.json` on
+  normalised title; unmatched ⇒ `unverified`. Needs a decision at G2/G7.
 - (nothing else from implementation yet — the F01 model retirement was caught by review, pre-code)
 
 ## Blockers
@@ -184,6 +217,22 @@ unless a member picks one up.
   assumed) — expected, not a blocker.
 
 ## Session log (newest first)
+
+- **2026-07-25 (Ali — admin-ajax probe, 1 h box, DECISION recorded):** The probe found the plan's
+  crawl target is empty and the real corpus is somewhere else. **0 of 249 posts carry any content**
+  in REST; a fully rendered service page gives 431 chars of nav/title/footer, no section keywords,
+  no content XHR. Checked **all 26 post types** (the plan froze 3 without verifying): only 2 news
+  posts have content. The corpus is behind `admin-ajax
+  action=omsar_load_directory_ministry_services`, one POST per ministry, returning structured
+  `required_documents_html` / `fees_html` / `notes_html` / `doc_url`. Harvested all 22 ministries:
+  **195 services, 181 (92.8%) with required documents, 136 (69.7%) with fees.** Nonce is not
+  per-user, so plain `requests` works — 22 POSTs ≈ 30 s replaces the planned 219-page Playwright
+  crawl, and the 10-page spike + `extract.py` are moot. **Three consequences needing team input:**
+  only 3/22 ministries are populated (source's own limitation, must be reported honestly, not as
+  national coverage); **passport renewal and driving licence do not exist**, breaking a gold case,
+  a G0 fixture and the demo script; and the ajax payload has no `post_id`/`modified_gmt`, which
+  FR6 freshness needs. Evidence: `report/evidence/ajax_probe.md`.
+  **Next: `fetch_directory.py` (ajax ingester) + rebuild core-40/gold/demo from what exists.**
 
 - **2026-07-25 (Ali — merged Mariam's G0/G1 work into `data-crawl`):** Mariam and Ali ran G1
   independently and **agree exactly: 249 = 195/24/30, 0 dup ids, all modified_gmt.** Her
