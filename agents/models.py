@@ -43,6 +43,7 @@ class ContactRecord(BaseModel):  # A27: crawled from /en/directory (NOT in REST)
     authority_term: Optional[str] = None
     phones: list[str] = Field(default_factory=list)
     address: Optional[str] = None
+    opening_hours: Optional[str] = None  # published per ministry in directoryEntityData
     url: str
     crawled_at: str
 
@@ -122,6 +123,7 @@ class ContactOut(BaseModel):
     authority_name_ar: str
     phones: list[str] = Field(default_factory=list)
     address: Optional[str] = None
+    opening_hours: Optional[str] = None
     source_url: str
 
 

@@ -183,8 +183,9 @@ def main() -> int:
                 source="ministires_directory",
                 authority_name_ar=name_ar,
                 authority_term=term,
-                phones=[],   # measured: the directory publishes no per-authority phone
+                phones=[],   # popups publish no phone; hotlines joined from Useful Numbers below
                 address=clean(ent_ar.get("location")) or clean(ent_en.get("location")),
+                opening_hours=clean(ent_ar.get("opening_hours")) or clean(ent_en.get("opening_hours")),
                 url=(ent_ar.get("official_url") or ent_en.get("official_url") or DIR_AR),
                 crawled_at=crawled_at,
             ))
@@ -202,6 +203,30 @@ def main() -> int:
             url=num["url"],
             crawled_at=crawled_at,
         ))
+
+    # ---- join ministry hotlines from the Useful Numbers list onto ministry records ----
+    # Mariam (G1b review): the popups have no phone, but ~7 ministry hotlines live in the Useful
+    # Numbers tab (Education 1747, Environment 1789, Health 1214 …). Match conservatively on the
+    # ministry-distinctive name part (strip the "وزارة" word); substring both ways, min len 4, so a
+    # municipality/institution can't false-match. Non-ministry hotlines (Ogero, Red Cross) don't match.
+    hotlines = [r for r in records if r.source == "useful-numbers-post"]
+    joined = 0
+    for m in records:
+        if m.source != "ministires_directory" or m.phones:
+            continue
+        mkey = normalize_key(m.authority_name_ar)
+        if "وزاره" not in mkey:          # only ministries have a hotline in the list
+            continue
+        mc = mkey.replace("وزاره", "")
+        if len(mc) < 4:
+            continue
+        for h in hotlines:
+            hc = normalize_key(h.authority_name_ar).replace("وزاره", "")
+            if len(hc) >= 4 and (hc in mc or mc in hc):
+                m.phones = list(h.phones)
+                joined += 1
+                break
+    print(f"  ministry hotlines joined from Useful Numbers: {joined}")
 
     # ---- coverage ----
     total = len(records)
