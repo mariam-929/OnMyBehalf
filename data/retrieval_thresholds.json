@@ -1,0 +1,8 @@
+{
+ "theta_abs": 0.58,
+ "theta_amb": 0.04,
+ "calibrated_on": "DEV split, synthetic templated queries",
+ "seed": 7,
+ "holdout_top1_or_clarify": 0.9667,
+ "synthetic": true
+}

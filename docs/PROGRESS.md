@@ -36,15 +36,15 @@ fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
 
 | Gate | What | Status | Date | Evidence | Human sign-off |
 |---|---|---|---|---|---|
-| G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic (Mariam read them 2026-07-25, but she RAN the bakeoff — producer ≠ reviewer, so it does not close the gate) |
+| G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS ×2 | 2026-07-25 | **reproduced independently by Ali**: gpt-oss 10/10@0.523s vs qwen 10/10@1.172s (Mariam: 10/10@0.55s vs 9/10@1.38s). Winner unchanged. report/evidence/bakeoff.md; data/model_limits.json (8K TPM both) | **PENDING: Maria** confirms Arabic (Mariam read them 2026-07-25, but she RAN the bakeoff — producer ≠ reviewer, so it does not close the gate) |
 | G1 | Service catalog (249 posts) | ✅ PASS | 2026-07-25 | data/catalog.json — 249 (195/24/30), 0 dup ids, all modified_gmt; `check_g1.py` 7/7; report/evidence/coverage.md | **Mariam 2026-07-25** (5 URLs load, titles match) |
 | G1b | Contact catalog (/en/directory crawl) | ✅ PASS | 2026-07-25 | 126 ContactRecords, all valid; coverage 100%/95%; contacts_coverage.md | **Mariam 2026-07-25** (verified live: ministries have location+site+hours+portals, no phone; 15 hotlines in Useful Numbers tab). 2 enhancement findings logged |
 | G2 | Corpus quality (REFRAMED: ajax, not crawl) | AUTO PASS (integrity) | 2026-07-25 | 193 corpus records generated, 180 complete, 0 overwrite, check_g2.py | **PENDING: Maria/Ghina** verify spike_gold + field-check 3 |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
-| G4 | Retrieval calibrated (top-1 + abstention) | NOT RUN | — | — | — |
+| G4 | Retrieval calibrated (top-1 + abstention) | AUTO PASS (synthetic queries) | 2026-07-25 | θ_abs=0.58 θ_amb=0.04; HOLDOUT 96.7% top1-or-clarify, abstain 5/5, clarify 2/2, p50 0.09s; report/evidence/retrieval.md | **PENDING: Ali/Gaby** inspect misses; **re-run on REAL queries at G8** |
 | G5 | Graph skeleton (BUILD track, fixtures) | NOT RUN | — | — | n/a |
 | G6 | Agent end-to-end (gold + 2 ext calls) | NOT RUN | — | — | — |
-| G7 | Freshness & HITL | NOT RUN | — | — | — |
+| G7 | Freshness & HITL | TOOLS DONE (gate needs G6 wiring) | 2026-07-25 | check_freshness + lookup TTL, live_service_lookup (anchored), review_queue (append-only/lock/dedupe), diff_recrawl; **23/23 unit tests incl. the A14 injected-outage drill** | **PENDING: Mariam** — observe one injected-source-failure run once the graph exists |
 | G8 | Eval (claim-level gold, 24-answer audit) | NOT RUN | — | — | — |
 | G9 | UI demo-ready (RTL + offline) | NOT RUN | — | — | — |
 | G10 | Repo & report compliant | NOT RUN | — | — | — |
@@ -130,7 +130,11 @@ unless a member picks one up.
 - [ ] ~~full crawl → `extract.py`~~ **SUPERSEDED** — no HTML extraction needed; `fetch_render.py`
       not needed for services (still needed for the /en/directory contacts crawl, G1b) — Owner: __
 - [ ] `core_verification.csv` (40 rows, split across team) + `document_sources.json` (≥20) → G3 — Owner: __
-- [ ] `indexer.py` → Chroma; G4 calibration on 10-query gold → BGE-M3 vs e5-base — Owner: __
+- [x] `indexer.py` → Chroma (193 vectors, BGE-M3, 49.5s build) + `search_services.py` (RRF k=60)
+      + `tests/gates/check_g4.py` → **G4 AUTO PASS** on a DEV/HOLDOUT split — Owner: **Ali**
+      (nominally Gaby's stream — taken because it was the critical path; **tell Gaby before she
+      duplicates it**). e5-base comparison NOT run: bge-m3 cleared every criterion, so the
+      fallback was not needed — Owner: __ if anyone wants the comparison for the report
 
 ### BUILD track (Jul 26, fixtures from spike)
 - [ ] `agents/models.py` — all typed contracts + discriminated responses (F07/F08) — Owner: __
@@ -139,9 +143,13 @@ unless a member picks one up.
 
 ### Jul 27
 - [ ] retrieve (RRF) + research_loop (tool-calling) + compose on real index — Owner: __
-- [ ] check_freshness (REST modified_gmt) + live_service_lookup + system per-doc freshness + QueueEvent append — Owner: __
+- [x] check_freshness (+ FR6b 180d lookup TTL) + live_service_lookup (anchored to the retrieved
+      service) + QueueEvent append (`tools/review_queue.py`) — Owner: **Ali**. 23/23 unit tests.
+      **System per-doc freshness still to wire into the graph at G6** (it is a deterministic system
+      step, not a model tool call — N3) — Owner: __ (whoever does G6)
 - [ ] smoke 5 (incl. gold case, 2 external calls visible) → G6; ITERATION_LOG first entries — Owner: __
-- [ ] `diff_recrawl.py` (canonical hash) + G7 — Owner: __
+- [x] `diff_recrawl.py` (canonical hash over the re-harvest) → QueueEvents — Owner: **Ali**.
+      Re-harvest reproduces all 193 hashes exactly, so a diff means the SOURCE moved, not us
 - [ ] Streamlit shell + RTL wrapper — Owner: __
 
 ### Jul 28
@@ -159,9 +167,9 @@ unless a member picks one up.
 
 | Report/demo claim | Artifact needed | Capture moment | Path | Captured? |
 |---|---|---|---|---|
-| Model decision | bakeoff numbers table | G0 | report/evidence/bakeoff.md | [ ] |
+| Model decision | bakeoff numbers table | G0 | report/evidence/bakeoff.md | [x] both runs + the reproducibility caveat + the French-visa refusal difference |
 | Coverage denominators | catalog/fetched/extracted/verified counts | G1–G3 | report/evidence/coverage.md | [~] catalog=249 captured at G1; fetched/extracted/verified pending G2–G3 |
-| Retrieval quality | G4 gold results + θ values | G4 | report/evidence/retrieval.md | [ ] |
+| Retrieval quality | G4 gold results + θ values | G4 | report/evidence/retrieval.md | [x] θ values, holdout numbers, both design corrections, synthetic caveat |
 | Agent loop / 2 ext calls | trace excerpt (JSONL) | G6 | report/evidence/trace_normal.json | [ ] |
 | 3 prompt iterations | ITERATION_LOG diffs | Jul 27–28 | prompts/ITERATION_LOG.md | [ ] |
 | 2 failure analyses | narratives + before/after | as they occur | report/evidence/failures.md | [ ] |
@@ -242,6 +250,75 @@ unless a member picks one up.
   assumed) — expected, not a blocker.
 
 ## Session log (newest first)
+
+- **2026-07-25 (Ali — G7 tools: freshness, live lookup, review queue, recrawl diff):** Built
+  `tools/review_queue.py` (append-only JSONL + portalocker + dedupe on (type, subject, open)),
+  `tools/crawler/diff_recrawl.py` (canonical-hash diff over a re-harvest → QueueEvents), fixed
+  both external-call tools, and added **23 unit tests, all passing**, including the **A14 drill by
+  injecting a dead REST session** rather than turning off the wifi — Dawlati fails while Groq
+  stays up, which is the whole point of that drill.
+  **Two real bugs found in the scaffolded tools, both of which would have surfaced as bad
+  behaviour rather than crashes:**
+  (1) **`live_service_lookup` was not anchored to the retrieved service.** It took
+  `max(modified_gmt)` across search hits, so `live_service_lookup("بطاقة هوية")` returned
+  `is_newer=True` from post 11633 — `إصدار بطاقة تعريف للخيل`, a horse ID card that merely happened
+  to be edited later. Since `is_newer` sets `newer_version_available` + `needs_human_review` (N6),
+  **it would have filled the review queue with false flags on correct answers** — the exact
+  failure G7 exists to prevent. `post_id` now anchors both `exists` and `is_newer`, matching the
+  contract in SCHEMA_AND_CONTRACTS, which already said "for the chosen service".
+  (2) **`check_freshness` compared `live > snapshot`**, so a source moving BACKWARDS (restore from
+  backup, reverted edit, or a corrupt snapshot on our side) was reported as `unchanged`. Any
+  difference is now `changed`.
+  Also added **FR6b**: `lookup_row_freshness()` implements the 180-day TTL for lookup-table rows,
+  which had no implementation anywhere.
+  `diff_recrawl --dry` reproduces all 193 content hashes exactly on a re-harvest, so a future diff
+  means the source moved, not that our parser drifted.
+  **G7 gate cannot fully close until G6**: the "per-doc freshness is a deterministic system step
+  within the tool budget" assertion needs the graph to exist. Tools + tests are done and unblocked.
+
+- **2026-07-25 (Ali — indexer + G4 retrieval):** `tools/indexer.py` (BGE-M3 1024-dim → Chroma,
+  193 vectors, 49.5s build), `tools/search_services.py` (BM25 titles + dense, RRF k=60, FR2
+  outcome), `tests/gates/check_g4.py` (DEV/HOLDOUT calibration). **G4 AUTO PASS:** θ_abs=0.58,
+  θ_amb=0.04, holdout **96.7%** top-1-or-clarify, known-out abstain **5/5**, under-specified
+  clarify **2/2**, p50 latency **0.09s**. Evidence: `report/evidence/retrieval.md`.
+  **Two design corrections, both forced by measured failures — worth the report's method section:**
+  (1) **RRF ranks, cosine decides.** Thresholding on the RRF score (the literal plan) does not
+  work: RRF is bounded and encodes *whether both channels returned a doc*, not relevance. Under
+  it, "تجديد جواز السفر" returned **`found` → `إصدار جواز سفر للخيل`, a horse passport**, and the
+  out-of-jurisdiction French-visa query scored higher than many correct hits. Abstention/ambiguity
+  now read dense cosine; both queries correctly abstain.
+  (2) **BM25 gated to positive scores.** An English query matches no Arabic title but BM25 still
+  ranks every doc, and RRF treated that garbage rank-1 as authoritative — "how do I get an ID card"
+  returned an ISBN request, with the correct `بطاقة هوية` at #3 despite cos 0.610, and a doc at
+  **cos 0.000** scoring 0.0164. Gated, English queries run dense-only and resolve correctly.
+  **Two caveats that MUST reach the report:** the query set is **synthetic** (templated from
+  titles — an upper bound and regression guard, not measured quality; re-run on real queries at
+  G8), and the objective **counts a clarification as equal to a correct top-1**, which biases the
+  agent toward asking rather than answering — θ_amb=0.02 gives 92.2% top-1 vs 84.4% at the chosen
+  0.04. That is a product call for the team; it is one value in `data/retrieval_thresholds.json`.
+  **Chose bge-m3 without running the e5-base comparison** — it cleared every criterion, so the
+  fallback was unnecessary; flagged in case the report wants the comparison anyway.
+  **Coordination note: this is Gaby's stream on the owners table.** Taken because it was the
+  critical path; Gaby must be told before she duplicates it, as happened with G1.
+
+- **2026-07-25 (Ali — G0 reproduced independently + bakeoff evidence captured):** Groq key wired
+  into Ali's `.env` (gitignored; verified never tracked, absent from history). Ran
+  `tests/gates/check_g0.py` on the second machine: **gpt-oss-120b 10/10 @0.523s p50 vs qwen3.6
+  10/10 @1.172s**, 8K TPM both. **AUTO PASS again; winner unchanged.** Two things this second run
+  established that the first could not:
+  (1) **The 9/10-vs-10/10 schema gap does NOT reproduce** — Qwen scored 10/10 here, so its single
+  `json_validate_failed` was transient (exactly what its retry path exists to absorb). The report
+  must rest the model decision on the reproducible grounds — 2.2× latency, strict `json_schema`
+  support, non-Preview — and not on the schema-validity difference.
+  (2) **A behavioural difference worth reporting:** on the adversarial fixture "How do I apply for
+  a French visa?" GPT-OSS returned `invalid_request` (correct per FR8) while **Qwen returned
+  `service_query`** — it would have attempted an answer. That maps onto one of the 6 adversarial
+  eval cases and is a quality argument for the winner, not just a speed one. n=1, so an
+  observation rather than a measured refusal rate.
+  Evidence register row "Model decision" now filled: `report/evidence/bakeoff.md`.
+  Also fixed a stale docstring in `fetch_directory.py` (it still claimed phones are empty for every
+  ministry, which Mariam's hotline-join enhancement superseded). **Key note: the Groq key was
+  pasted into a chat transcript — rotate it before submission on Jul 29.**
 
 - **2026-07-25 (corpus generation + G2 setup, after PR #1 merge):** Reviewed + verified Ali's PR
   (independently reproduced 193 records). Generated the corpus for real → 193 `data/corpus/*.json`.
