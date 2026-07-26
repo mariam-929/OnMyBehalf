@@ -23,13 +23,43 @@ never invent durations; IntentResult/ResearchPlan added to schema; per-doc fresh
 deterministic system step; PROGRESS stale refs fixed). Owners assigned (table below); Groq key
 created.
 
-**Update 2026-07-25 (later — build has started):** Repo scaffolded and public. **G0 AUTO PASS**
-(gpt-oss-120b; pending Maria's Arabic sign-off). **G1 AUTO PASS** — `data/catalog.json` enumerated,
-195+24+30 = **249 exact**, denominators captured to `report/evidence/coverage.md` (pending Mariam's
-5-URL check). Second dev env (Ali) up on Python 3.13. Known gotcha: **Dawlati Cloudflare 403s VPN
-IPs** — see Findings. **Next action: DATA track — admin-ajax probe (1 h box) → 10-page spike +
-`data/spike_gold.json` → field-recall scoring → G2**; BUILD track (graph skeleton on synthetic
-fixtures) can start in parallel. Deadline Wed 2026-07-29 (written).
+### ▶ CURRENT STATE — read this first (2026-07-25, end of build day 1)
+
+**Repo public + on GitHub: github.com/mariam-929/OnMyBehalf. Env fully set up** (venv at
+`%USERPROFILE%\venvs\OnMyBehalf` — OUTSIDE OneDrive; all deps + Playwright chromium installed; Groq
+key in `.env`, gitignored & validated). Run anything with
+`C:\Users\Mariam\venvs\OnMyBehalf\Scripts\python.exe`.
+
+**Gate status:**
+| Gate | State |
+|---|---|
+| **G0** model bakeoff | ✅ AUTO PASS (gpt-oss-120b wins) — ⏳ needs **Maria** Arabic sign-off |
+| **G1** catalog (249) | ✅ **FULLY PASSED** (Mariam signed) |
+| **G1b** contacts (126) | ✅ **FULLY PASSED** (Mariam signed) + enriched (opening_hours 23, hotlines 6) |
+| **G2** corpus (193 records) | ✅ AUTO PASS integrity — ⏳ needs **Maria/Ghina** field-check + spike_gold verify |
+| G3–G11 | NOT STARTED |
+
+**Key facts a new session must know:**
+- **Corpus source changed:** service DETAIL pages are EMPTY; corpus comes from the services-directory
+  admin-ajax endpoint (Ali, PR #1 merged). `tools/crawler/fetch_service_directory.py` → **193
+  CorpusRecords** (180 complete). Data is gitignored — regenerate with `enumerate.py` then
+  `fetch_service_directory.py`.
+- **Passport & driving-license DO NOT EXIST on Dawlati.** Core-40/gold/demo must be rebuilt around
+  the **civil-registry cluster** (بطاقة هوية, تسجيل ولادة/زواج/وفاة, بيان قيد). Grounded candidate
+  list ready: `report/evidence/core40_candidates.md` (43 civil-registry services exist).
+- **Only 3 of 22 ministries populated** (agriculture/interior/culture) — source property, report honestly.
+- **Dawlati Cloudflare 403s VPN IPs** — if any Dawlati call 403s, check the VPN first (see Findings).
+
+**NEXT ACTIONS (two parallel tracks):**
+1. **DATA/human (critical path, Maria+Ghina):** rebuild core-40 from `core40_candidates.md` → verify
+   `spike_gold.json` (correct `gold_documents`, set `verified=true`) → `check_g2.py` → G2 + G3.
+2. **BUILD track (not started, independent):** **G5 — graph skeleton** on synthetic fixtures
+   (`agents/graph.py` + nodes). Needs no corpus; can start immediately.
+3. Outstanding quick sign-offs: **Maria** (G0 Arabic read), then freeze `pip freeze` pins.
+Deadline **Wed 2026-07-29** (written).
+
+---
+_(historical planning log below — CURRENT STATE above supersedes it for "where are we now")_
 
 ## Gate record (AUTHORITATIVE — defs in `VERIFICATION.md` v3; no step starts before upstream gates
 ## PASS; Claude runs auto checks but may NOT fill "Human sign-off")
@@ -243,6 +273,12 @@ unless a member picks one up.
 
 ## Session log (newest first)
 
+- **2026-07-25 (G1b enhancements + handoff prep):** Mariam signed off G1 (5 URLs) and G1b (contacts
+  live-review). Per her review, added two contact enhancements: `opening_hours` captured (23
+  ministries) + Useful-Numbers hotlines joined to ministries (6 gained a phone; no false matches).
+  Decided AGAINST scraping other government sites (fragile, dilutes single-source thesis, low ROI) —
+  Dawlati's own data provided both. Refreshed CLAUDE.md + this "CURRENT STATE" block for a clean
+  new-chat handoff. **Next: core-40 rebuild + G2 field-check (Maria/Ghina); BUILD-track G5.**
 - **2026-07-25 (corpus generation + G2 setup, after PR #1 merge):** Reviewed + verified Ali's PR
   (independently reproduced 193 records). Generated the corpus for real → 193 `data/corpus/*.json`.
   Reframed G2 (no page crawl; pages empty) → wrote `tests/gates/check_g2.py` (integrity PASS,

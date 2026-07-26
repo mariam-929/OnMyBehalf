@@ -1,5 +1,17 @@
 # OnMyBehalf — MSBA 316 Final Project (agentic AI for Lebanese government procedures)
 
+> **▶ NEW SESSION START HERE:** read **`docs/PROGRESS.md` → the "CURRENT STATE" block at the top** —
+> it is the single source of truth for exactly where the project is (gates done, next actions, key
+> facts). Then follow the Session protocol below. Do NOT re-derive state from scratch or re-read the
+> whole history. Env is already set up: run Python with
+> `C:\Users\Mariam\venvs\OnMyBehalf\Scripts\python.exe` (venv is OUTSIDE OneDrive); Groq key is in
+> `.env` (gitignored). Repo: github.com/mariam-929/OnMyBehalf.
+>
+> **As of 2026-07-25 (build day 1 done):** G1 & G1b FULLY PASSED; G0 & G2 auto-passed (awaiting
+> human sign-offs); corpus of 193 records generated from the admin-ajax endpoint (pages are empty);
+> passport/license don't exist on Dawlati → core-40 rebuild around civil registry is the critical
+> path; BUILD-track G5 (graph skeleton) not yet started. Full detail in `docs/PROGRESS.md`.
+
 Team: Gaby, Mariam, Ali, Ghina, Maria. This repo is the single home for code + plan. Human
 teammates: start at `CONTRIBUTING.md` then `SETUP.md`. The `docs/` folder is the authoritative plan.
 
