@@ -1,0 +1,299 @@
+# OnMyBehalf — an accountable agent for Lebanese government procedures
+
+**MSBA 316 — Text Analytics & NLP · AUB · Summer 2025/26 · Dr. Ahmad El-Hajj**
+Team: Gaby, Mariam, Ali, Ghina, Maria
+Repository: <https://github.com/mariam-929/OnMyBehalf>
+
+---
+
+## 1. Problem and stakeholder
+
+Completing any transaction at a Lebanese government office requires knowing three things in
+advance: which documents to bring, what it costs, and where to go. Getting one wrong means a
+wasted trip. The information is published — on **Dawlati** (dawlati.gov.lb), OMSAR's national
+services portal — but it is scattered across a directory interface, almost entirely in Arabic,
+and it never answers the question citizens actually have: *where do I obtain each of the documents
+I am being asked to bring?*
+
+**Stakeholder:** the citizen. **System owner:** OMSAR content operations, who would own the
+human-review queue described in §7.
+
+**What we built.** An agent that takes a question in Arabic or English and returns a structured
+checklist: every required document, **where to obtain each one**, fees, where to apply, source
+freshness, and a link to the exact Dawlati page each fact came from — together with a confidence
+score and an explicit human-review flag when the source is uncertain or the data model cannot
+represent the answer faithfully.
+
+**The claim is not that it is a better chatbot. It is that it is an accountable one.** Every
+factual field is traceable to a government page; the system says when it does not know; and it
+flags for human review rather than papering over gaps. Section 6 shows where it still fails.
+
+---
+
+## 2. Data: what Dawlati actually contains
+
+We froze a catalog of **249 posts** (195 services, 24 service pages, 30 useful numbers) from the
+public WordPress REST API, and a corpus of **193 service records**, 180 of them with required
+documents. Three discoveries reshaped the project, and all three are properties of the source
+rather than of our pipeline.
+
+**The service detail pages are empty.** The plan assumed a 219-page crawl. A one-hour probe found
+that **0 of 249 posts carry content in REST**, and a fully rendered service page yields ~430
+characters of navigation and footer with no section keywords and no content XHR. The real corpus
+sits behind an admin-ajax endpoint (`omsar_load_directory_ministry_services`), one call per
+ministry, returning structured `required_documents_html` / `fees_html` / `notes_html`. Twenty-two
+POSTs (~30 s) replaced the planned Playwright crawl. Had we not probed, we would have produced 219
+empty records and failed our own corpus gate at roughly 0% recall.
+
+**Only 3 of Lebanon's 22 ministries have published anything** — Agriculture (115 services),
+Interior (53), Culture (27). The other 19 return zero. Dawlati says so itself on the guide page.
+**We report four denominators separately and never present 195 as national coverage.**
+
+**Passports and driving licences do not exist on Dawlati.** Both were in our original core-40, one
+was a gold eval case, and one was the demo script. The only «جواز سفر» match in the entire corpus
+is **إصدار جواز سفر للخيل** — a horse passport. The project was rebuilt around the civil-registry
+cluster (identity, birth, marriage, divorce, death, civil extracts), which does exist and is what
+citizens most often need.
+
+---
+
+## 3. Method
+
+### 3.1 Architecture
+
+A **LangGraph** state machine implementing perceive → plan → act → observe:
+
+```
+detect_language → validate_input → classify_intent → retrieve
+   → research (bounded: plan → execute → ≤1 replan) → compose → validate_schema → respond
+        ↘ invalid_request   ↘ clarification_needed   ↘ service_not_found   ↘ error
+```
+
+Every node appends to `trace_events`, which is the **single** source for both the UI trace panel
+and the eval harness — so what the demo shows is what the metrics measured.
+
+Language detection and input validation are **deterministic and run before any model call**. Two
+reasons: an adversarial input should never reach the model, and a refusal that varies run to run
+cannot be rehearsed for a demo.
+
+### 3.2 Retrieval
+
+Hybrid, fused with **Reciprocal Rank Fusion** (k=60): BM25 over titles + dense vectors over
+Chroma, plus the same two channels over a boilerplate-stripped query, plus a fifth channel for
+curated-core membership. Five design decisions, each forced by a measurement (§6.2).
+
+Embeddings are **LaBSE**, not the planned BGE-M3. BGE-M3 is a ~2.3 GB download that had
+transferred 36 KB after several minutes on the build machine and was additionally saturating the
+connection badly enough to make our live REST calls time out. LaBSE was cached, is purpose-built
+for cross-lingual sentence retrieval across 109 languages including Arabic, and `EMBED_MODEL` is
+an environment variable so the comparison remains a one-line change.
+
+### 3.3 Tools (4, of which 2 are external)
+
+| tool | kind | what it does |
+|---|---|---|
+| `search_services` | local | RRF-fused hybrid retrieval |
+| `resolve_document` | local | resolves each required document to where it is obtained; **abstains** below threshold |
+| `check_freshness` | **external** | live REST `modified_gmt` vs our snapshot → `unchanged / changed / unverified` |
+| `live_service_lookup` | **external** | live REST `?search=` — does this service still exist, is there a newer one |
+
+`resolve_document` uses a **stricter** threshold than retrieval (0.62 vs 0.45) plus a tie band. The
+asymmetry is deliberate: a wrong service answer is visible and recoverable, but a wrong *"go here
+to obtain this document"* sends a citizen to the wrong ministry.
+
+### 3.4 Confidence and human review
+
+`confidence` is an **evidence-quality heuristic, not a calibrated probability**, and is disclosed
+as such in the answer and here. It starts at 0.9 for a curated-core service or 0.5 otherwise, and
+deducts for stale or unverified freshness, unresolved documents, incomplete records, and
+conditional structure the data model cannot express (§5). Anything flagged is written to an
+append-only, file-locked, deduplicated review queue owned by OMSAR content ops.
+
+---
+
+## 4. Prompts and iteration
+
+Three prompts (`intent_classifier`, `research_agent`, `composer`), each with role, mandate, tool
+list, **negative constraints** and an output schema, all loaded from `prompts/*.md` so the version
+demoed is the version documented.
+
+Full detail with before/after measurements is in **`prompts/ITERATION_LOG.md`**. Summary:
+
+| # | iteration | observed failure | result |
+|---|---|---|---|
+| 1 | `intent_classifier` v1→v2 | **A domain expert's own question was refused as adversarial** | `invalid_request` → `clarification_needed`; adversarial 6/6, no regression |
+| 2 | retrieval query handling v1→v2 | natural questions retrieved the wrong service while bare titles scored 1.000 | natural-phrasing top-1 **1/3 → 5/6** |
+| 3 | retrieval ranking v2→v3 | a question returned a service **the expert had personally rejected** | expert-question top-1 **3/8 → 5/8** |
+
+Iteration 1 is worth reading in full. The root cause was not the prompt's wording: **the prompt was
+never being sent.** `system_prompt` defaulted to `""`, so the model was classifying with no
+instructions at all. The deterministic guardrail was checked first, returned "valid", and that is
+what located the bug in the model call.
+
+---
+
+## 5. The central finding: a flat document list cannot represent these services
+
+Two domain experts independently reached the same conclusion during human verification, and it is
+the most important result in this project. `required_documents` is a `list[str]`, but the source
+encodes conditional logic that a flat list destroys:
+
+- **branch by applicant type** — #11528 has three cases (minor / adult / outside the legal window)
+  behind `I` `II` `III` headings; #11476 branches general / Syrian wife / Palestinian wife, each
+  with different documents;
+- **either/or within one requirement** — `اقامة صالحة` **أو** `تأشيرة دخول`;
+- **eligibility preconditions** — #11476 requires the marriage registered ≥1 year before applying;
+- **document recency windows differing by case** — Syrian `بيان قيد` < 6 months, Palestinian < 3.
+
+**#11476 exhibits all four in a single service.**
+
+Flattening turns *"bring A **or** B"* into *"bring A **and** B"* and shows every branch to every
+applicant. The agent is therefore not merely incomplete — it can be **confidently wrong**, which is
+the one failure mode this project exists to prevent.
+
+**Measured: 113 of 180 services (63%) carry at least one marker; 46 (26%) carry a high-confidence
+one.** Fixing the data model means a schema change, re-extraction and re-verification — not
+possible before the deadline. So the system **detects and discloses**: a caveat in the answer, a
+confidence penalty capped at 0.40, and a review-queue event. A branched core service can no longer
+answer at 0.9.
+
+This finding also touches FR6: the recency windows apply to the **citizen's own documents**, which
+`check_freshness` does not cover at all — it checks whether the *source page* changed.
+
+---
+
+## 6. Evaluation
+
+### 6.1 Headline numbers
+
+24 test cases (5 normal, 13 edge, 6 adversarial). **Eight were written by the domain experts** in
+their own procedure clusters — the only queries in this project not authored by a developer.
+
+| metric | value |
+|---|---|
+| **Failure rate** | **36.4%** (8 of 22 scored) |
+| **Hallucinated documents** | **0** |
+| **Latency** | mean 4.96 s · **p50 1.56 s** · max 28.1 s (cold encoder load) |
+| Adversarial | **6/6** |
+| Normal | 3/5 |
+| Edge | 5/11 |
+| Retrieval top-1 (holdout) | 88% (7/8), 95% CI 53–98% |
+| Extraction recall / precision | 90% / 81% on 8 human-verified services |
+
+Two Arabizi cases are marked `known_fail` and **kept in the set and scored** — a failure excluded
+from your own eval is a failure you are hiding — and reported separately so the headline rate stays
+readable.
+
+**On the zero hallucinations.** The detector is real: we verified it by injecting a fabricated
+document into a known-good answer, and it was caught. But the honest framing is architectural, not
+behavioural — **documents are passed through from the retrieved record, not generated**, so
+fabrication is structurally impossible in the document list. Zero reflects a design choice
+(extractive, not generative). It is a meaningful property to claim, but it is not evidence that the
+language model resists hallucination.
+
+### 6.2 Two failures of measurement, not just of the system
+
+Both are reported because they shaped every number above.
+
+**We reported 100% top-1 and it was wrong.** The first retrieval gold set was dominated by bare
+service titles, which score cosine 1.000 because the query is byte-identical to the indexed text.
+Top-1 read 100% while natural questions were quietly failing — «شو المستندات المطلوبة لإعادة قيد
+مطلقة؟» retrieved the **wrong service** at 0.483. Rebuilt so questions dominate: **88%**. *A
+holdout only protects you if it resembles production, and ours did not.*
+
+**The gate was not testing the system.** `check_g4` scored abstention on cosine while the live
+retrieve node still thresholded on RRF score. The gate reported PASS while the agent abstained on a
+valid demo query. Both now call one shared `classify_outcome()`.
+
+The pattern in both: **each time the test data or harness became more independent, measured
+performance got worse.** Retrieval scored 3/8 on the experts' questions versus 88% on ours.
+
+### 6.3 Failure analysis
+
+Of the 8 scored failures, roughly half are strict-scoring artefacts rather than defects: two are
+`clarification_needed` where the gold expected an answer, and the candidates are genuine siblings
+that the query does not disambiguate (#11542 divorce-after-sect-change vs #11546
+marriage-after-sect-change). Asking rather than guessing is the behaviour we want. The genuine
+defects are two abstentions on valid questions and two wrong-sibling retrievals.
+
+**Failure mode 1 — Arabizi is misrouted as English.** `detect_language` decides on
+Arabic-vs-Latin letter ratio, so `shu badde la sajjel zawej` scores zero Arabic letters and routes
+as English, and the agent answers an Arabic speaker in English. Arabizi is extremely common in
+Lebanon. The fix is transliteration detection — real work, and not safe to attempt two days out.
+
+**Failure mode 2 — semantic similarity cannot detect absence.**
+«شو بدي لأجدد جواز سفري؟» returns **إصدار جواز سفر للخيل** — a horse passport — at cosine 0.598.
+Passports for people do not exist on Dawlati; horse passports do. An embedding has no way to
+represent *"this does not exist"*, only *"here is the nearest thing that does"*. Abstention is
+**1 of 3**. Boilerplate stripping made this worse, and the trade was taken knowingly: answering
+real questions is the primary function, and the citation plus the confidence score are what make a
+wrong retrieval recoverable for the user.
+
+---
+
+## 7. Freshness, human-in-the-loop, and honest limits
+
+`check_freshness` compares live REST `modified_gmt` against the value stored at crawl time and
+returns `unchanged | changed | unverified`. This is **change detection, not a currency guarantee**,
+and is labelled that way everywhere it appears. Recrawl diffing uses one canonical
+`fetch → render → extract → normalize → sha256` pipeline, never raw HTML.
+
+Both producers feed one **append-only, file-locked, deduplicated** `review_queue.jsonl`. Dedupe is
+by `(event_type, subject_post_id, subject_label)` so one stale service hit by ten users produces
+one ticket, not ten. Queue reads happen inside the lock, through the same handle — checking before
+locking would let concurrent writers both observe "absent" and both append.
+
+**Known limitations, stated plainly:**
+
+1. **Coverage is 3 of 22 ministries.** A source property, reported with four denominators.
+2. **Conditional structure is detected, not represented** (§5) — 63% of services affected.
+3. **Abstention is weak (1/3)** — §6.3.
+4. **Arabizi is unsupported** — §6.3.
+5. **Extraction recall is 90%, not 100%.** Human verification rated 3 of 8 services inadequate;
+   the residual misses are documents living in the notes section rather than the documents field.
+6. **Small n.** 12 holdout retrieval queries, 22 scored eval cases, 8 human-verified services.
+   Confidence intervals are reported; the point estimates should not be quoted alone.
+7. **Reviewer independence is partial.** The team reduced to three during the build, so the
+   technical gates have no independent technical reviewer. Those sign-offs are recorded as
+   producer self-checks rather than filled in — a faked sign-off would invalidate the gate record.
+
+---
+
+## 8. Verification and process
+
+Eleven stage gates (G0–G11), each with an automated check and a human check, recorded in
+`docs/PROGRESS.md`. Two rules were enforced throughout:
+
+- **reviewer ≠ producer.** Maria and Ghina each verified their own clusters and reviewed each
+  other's; neither approved her own work. Where no independent reviewer existed, the gate stayed
+  open rather than being signed.
+- **Gates were allowed to fail.** G2 sat at an honest FAIL (80% recall) until a validated fix
+  raised it to 90%. G4 still fails 2 of 4 criteria and is reported as such.
+
+Human verification was decisive rather than ceremonial. Two experts checked 8 services field by
+field and found **two distinct extraction failure classes** plus the structural finding in §5.
+Their skim-level checks found worse bugs than the deep checks did — without them we would have
+shipped on false confidence.
+
+Status at submission: **G1, G1b, G2, G5, G6, G9 pass**; G3 is complete for the core-44 and gold but
+lacks the source-checked lookup table; G4 passes 2 of 4; G7, G8, G10, G11 partial.
+
+**AI usage** is logged in `report/AI_LOG.md` per the brief.
+
+---
+
+## Appendix — reproducing the numbers
+
+```bash
+python tools/crawler/enumerate.py                 # catalog (249)
+python tools/crawler/fetch_service_directory.py   # corpus (193)
+EMBED_MODEL=sentence-transformers/LaBSE python tools/indexer.py
+EMBED_MODEL=sentence-transformers/LaBSE python tests/gates/check_g4.py   # retrieval
+EMBED_MODEL=sentence-transformers/LaBSE python tests/gates/check_g6.py   # agent e2e
+EMBED_MODEL=sentence-transformers/LaBSE python tests/run_eval.py         # the 24 cases
+pytest tests/unit -q                                                     # 64 unit tests
+streamlit run app/streamlit_app.py
+```
+
+`data/` is gitignored and regenerated by the first two commands; the numbers in §6 come from
+`tests/eval_report.json` and `report/evidence/`.

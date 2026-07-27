@@ -88,8 +88,8 @@ _(historical planning log below — CURRENT STATE above supersedes it for "where
 | G5 | Graph skeleton (BUILD track, fixtures) | ✅ **AUTO PASS** | 2026-07-27 | `check_g5.py` 9/9: compiles (14 nodes); all 5 terminal actions schema-valid w/ traces; 64 unit tests green | **n/a — no human check** |
 | G6 | Agent end-to-end (gold + 2 ext calls) | ✅ **AUTO PASS** | 2026-07-28 | `check_g6.py` 8/8 — live index + live REST; both external calls in trace; 4/5 docs resolved; adversarial refused; out-of-scope abstains; report/evidence/trace_normal.json | **PENDING: Maria/Ghina** read the Arabic answer for fluency. Reviewer: __ |
 | G7 | Freshness & HITL | NOT RUN | — | — | — |
-| G8 | Eval (claim-level gold, 24-answer audit) | NOT RUN | — | — | — |
-| G9 | UI demo-ready (RTL + offline) | NOT RUN | — | — | — |
+| G8 | Eval (claim-level gold, 24-answer audit) | ⚠️ **RUN** | 2026-07-28 | 24 cases; **failure rate 36.4% (8/22)**, **hallucinations 0**, latency p50 1.56s/mean 4.96s; adversarial 6/6; tests/eval_report.json | **PENDING**: all-24 manual audit (Maria/Ghina). Reviewer: __ |
+| G9 | UI demo-ready (RTL + offline) | ✅ **AUTO PASS** | 2026-07-28 | `check_g9.py` 5/5 — headless 200 in 3.4s, --offline banner, `<script>` + bidi payloads escaped, AR→rtl/EN→ltr | **PENDING**: non-builder walks the demo (A15). Reviewer: Maria/Ghina |
 | G10 | Repo & report compliant | NOT RUN | — | — | — |
 | G11 | Demo readiness (human-only) | NOT RUN | — | — | — |
 
