@@ -23,53 +23,110 @@ never invent durations; IntentResult/ResearchPlan added to schema; per-doc fresh
 deterministic system step; PROGRESS stale refs fixed). Owners assigned (table below); Groq key
 created.
 
-### ▶ CURRENT STATE — read this first (2026-07-25, end of build day 1)
+### ▶ CURRENT STATE — read this first (2026-07-28, end of build day 4)
 
-**Repo public + on GitHub: github.com/mariam-929/OnMyBehalf. Env fully set up** (venv at
-`%USERPROFILE%\venvs\OnMyBehalf` — OUTSIDE OneDrive; all deps + Playwright chromium installed; Groq
-key in `.env`, gitignored & validated). Run anything with
-`C:\Users\Mariam\venvs\OnMyBehalf\Scripts\python.exe`.
+**Deadline: Wed 2026-07-29.** Branch **`build-graph-g5`**, 13 commits ahead of `main`, pushed,
+tree clean. PR not opened — decide whether to PR or merge direct given the timeline.
 
-**Gate status:**
+#### The 6 things that will waste your time if you don't know them
+
+1. **VPN OFF for anything touching dawlati.gov.lb.** Cloudflare 403s VPN IPs. Symptom is subtle:
+   answers still render but every one says `freshness: unverified`.
+2. **Launch the UI with the `-m` form**, never bare `streamlit run` — `streamlit` is not on the
+   system PATH and `Activate.ps1` silently fails under PowerShell's execution policy. This
+   produced a real "localhost refused to connect" panic:
+   `& "$env:USERPROFILE\venvs\OnMyBehalf\Scripts\python.exe" -m streamlit run app/streamlit_app.py`
+   (full launch guide + verified demo prompts: `RUN.md`)
+3. **First query takes ~25 s** (encoder load), then ~1.5 s. Warm it before any demo.
+4. **`data/` is gitignored.** A fresh clone has NO corpus and NO index. Rebuild:
+   `enumerate.py` → `fetch_service_directory.py` → `indexer.py`.
+5. **Encoder is LaBSE, not BGE-M3.** BGE-M3 stalled at ~1.2 GB of 2.3 GB AND saturated the
+   connection enough to time out our live REST calls. LaBSE is now the code default; all reported
+   numbers were measured with it. `EMBED_MODEL` overrides, but the index must be rebuilt after.
+6. **A big download in the background breaks the live tool calls.** Cost an hour of false
+   debugging when freshness read "source unreachable" while the tools worked fine standalone.
+
+#### Team
+
+**Ali and Gaby are no longer contributing** (Mariam's call, 2026-07-28) — their work streams
+(crawl/index/retrieval, UI) were absorbed. **Maria and Ghina delivered everything asked of them**
+and their work is the backbone of G2 and G3. Consequence for the record: the technical gates now
+have **no independent technical reviewer**. Those sign-offs are recorded as producer self-checks;
+they are NOT filled in. REPORT §7.7 states this.
+
+#### Gate status
+
 | Gate | State |
 |---|---|
-| **G0** model bakeoff | ✅ AUTO PASS (gpt-oss-120b wins) — ⏳ needs **Maria** Arabic sign-off |
-| **G1** catalog (249) | ✅ **FULLY PASSED** (Mariam signed) |
-| **G1b** contacts (126) | ✅ **FULLY PASSED** (Mariam signed) + enriched (opening_hours 23, hotlines 6) |
-| **G2** corpus (193 records) | ✅ **FULLY PASSED 2026-07-27** — auto PASS (recall 90%, precision 81%) + human check complete both directions (Maria+Ghina) |
-| G3–G11 | NOT STARTED |
+| G0 bakeoff | AUTO PASS — ⏳ Maria's Arabic sign-off still blocked: `report/evidence/bakeoff.md` was never written (check_g0 only persisted aggregate counts) |
+| G1 catalog (249) | ✅ FULLY PASSED |
+| G1b contacts (126) | ✅ FULLY PASSED |
+| G2 corpus (193) | ✅ **FULLY PASSED** — recall 90%, precision 81%, human check complete both directions |
+| G3 core-44 + gold | ⚠️ **PARTIAL** — `curated_core.json` (44) + `gold_claims.json` (8 expert cases) done; **missing `document_sources.json` (≥20 source-checked rows) and `check_g3.py`** |
+| G4 retrieval | ⚠️ **2/4 AUTO** — top-1 88% (CI 53–98%), abstain 1/3, clarify 1/1, 1.26 s/query. Left failing deliberately |
+| G5 graph | ✅ **AUTO PASS** 9/9, 64 unit tests |
+| G6 agent e2e | ✅ **AUTO PASS** 8/8 — live index + live REST, both external calls in trace |
+| G7 freshness/HITL | ⚠️ code exists and is unit-tested (`check_freshness`, `live_service_lookup`, `review_queue`); **`diff_recrawl.py` still a stub, no `check_g7.py`** |
+| G8 eval | ⚠️ **RUN** — 24 cases, failure rate 36.4%, hallucinations 0, p50 1.56 s, adversarial 6/6. Needs the all-24 manual audit |
+| G9 UI | ✅ **AUTO PASS** 5/5 |
+| G10 repo/report | ⚠️ **REPORT.md written (all 8 sections)**; repo hygiene, secret scan script, README refresh not done |
+| G11 demo | ❌ NOT STARTED — human-only: 2 rehearsals, 3 outage drills, backup video |
 
-**Key facts a new session must know:**
-- **Corpus source changed:** service DETAIL pages are EMPTY; corpus comes from the services-directory
-  admin-ajax endpoint (Ali, PR #1 merged). `tools/crawler/fetch_service_directory.py` → **193
-  CorpusRecords** (180 complete). Data is gitignored — regenerate with `enumerate.py` then
-  `fetch_service_directory.py`.
-- **Passport & driving-license DO NOT EXIST on Dawlati.** Core-40/gold/demo must be rebuilt around
-  the **civil-registry cluster** (بطاقة هوية, تسجيل ولادة/زواج/وفاة, بيان قيد). Grounded candidate
-  list ready: `report/evidence/core40_candidates.md` (43 civil-registry services exist).
-- **Only 3 of 22 ministries populated** (agriculture/interior/culture) — source property, report honestly.
-- **Dawlati Cloudflare 403s VPN IPs** — if any Dawlati call 403s, check the VPN first (see Findings).
+#### Headline numbers (all reproducible — see `VERIFY.md`)
 
-**NEXT ACTIONS (updated 2026-07-27 — G2 and G5 both passed today):**
-1. ~~G3 blocked on Ghina~~ **GHINA'S 27 ROWS LANDED 2026-07-28.** `curated_core.json` = **44
-   services**; `gold_claims.json` = 8 expert-written cases. Remaining for a full G3:
-   `document_sources.json` (≥20 rows source-checked) + `check_g3.py`.
-2. **G4 BUILT 2026-07-28** — indexer + hybrid retrieval + calibration + check_g4 all done.
-   3/4 auto criteria pass. The single failure is a DISPUTED GOLD LABEL, not a system defect:
-   «بيان قيد» is labelled `clarify` but the system returns `found -> #11548 بيان قيد عائلي
-   وإفرادي`, which may well be right (that service covers both family and individual extracts;
-   #11470 is a niche pre-1932 variant). **Left failing on purpose — relabelling to pass would be
-   tuning to the metric. Needs Maria/Ghina's verdict.**
-3. **G6** needs both of the above; nothing else blocks it.
-4. **G9 UI shell (Gaby)** — codes against `models.py` + a fixture Envelope; does NOT need the
-   agent. Hard checkpoint: if it doesn't exist by Jul 28 morning, Mariam builds it and cuts
-   cosmetics (keep RTL, trace expander, raw JSON — those are graded).
-5. **REPORT — 55% of the grade and it does not exist.** §§1–3 are writable now from `docs/`; §7 has
-   unusually strong material (measured data-model limitation + 7 characterised failure classes).
-6. Outstanding sign-offs: **Maria (G0 Arabic)** — blocked on regenerating
-   `report/evidence/bakeoff.md`, since `check_g0.py` only ever persisted aggregate counts and the
-   5 Arabic outputs were console-only. Then freeze `pip freeze` pins.
-Deadline **Wed 2026-07-29** (written).
+| metric | value | source |
+|---|---|---|
+| Eval failure rate | **36.4%** (8/22 scored) | `tests/eval_report.json` |
+| Hallucinated documents | **0** | ibid — but see the caveat below |
+| Latency | p50 **1.56 s**, mean 4.96 s | ibid |
+| Adversarial | **6/6** | ibid |
+| Retrieval top-1 (holdout) | 88% (7/8), CI 53–98% | `check_g4.py` |
+| Extraction recall / precision | 90% / 81% | `check_g2.py` |
+| Conditional structure | 113/180 (63%) flagged, 46 (26%) high-confidence | `tools/conditional_detect.py` |
+| Core services | 44 (Maria 23 + Ghina 21) | `data/curated_core.json` |
+
+**⚠ Never quote "0 hallucinations" without the caveat.** Documents are PASSED THROUGH from the
+retrieved record, not generated, so fabrication is structurally impossible in that list. The
+detector is real (verified by injecting a fabrication — it caught it), but zero reflects an
+architectural choice, not model restraint. REPORT §6.1 says this; so must anyone presenting.
+
+#### Findings that carry the report
+
+1. **A flat `list[str]` cannot represent these services** (REPORT §5) — branch by applicant,
+   either/or, preconditions, per-case recency windows. #11476 has all four. 63% of the corpus
+   affected. Detected and disclosed, not fixed.
+2. **Semantic similarity cannot detect absence.** «شو بدي لأجدد جواز سفري؟» returns
+   **إصدار جواز سفر للخيل** (a HORSE passport) at cos 0.598. Abstention is 1/3.
+3. **Arabizi routes as English** — `detect_language` counts script ratio. 2 cases kept in the eval
+   marked `known_fail` so it is measured, not hidden.
+4. **Our own measurement failed twice, and both are in the report.** We published top-1 100% and
+   retracted it (gold was bare titles scoring cos 1.000). And `check_g4` scored on cosine while the
+   runtime thresholded on RRF — the gate passed while the agent refused a valid query. Pattern:
+   **every time the test data got more independent, the numbers got worse** (3/8 on the experts'
+   own questions vs 88% on ours).
+5. **The intent prompt was never being sent** — `system_prompt` defaulted to `""`, so the model
+   classified with no instructions and refused Ghina's own question. ITERATION_LOG entry 1.
+
+#### NEXT ACTIONS, in priority order
+
+1. **G11 demo rehearsal — human-only, nobody else can do it.** 2 runs, 3 outage drills, backup
+   video. Demo prompts that are VERIFIED to work are in `RUN.md`.
+2. **G10 repo hygiene** — secret-scan script, README refresh, fresh-clone test. `VERIFY.md` has
+   the audit commands.
+3. **Regenerate `report/evidence/bakeoff.md`** (~10 min) — unblocks Maria's G0 sign-off and fills
+   the last empty Evidence-register row.
+4. **G3 finish** — `document_sources.json` (≥20 rows source-checked) + `check_g3.py`.
+5. **G8 manual audit** of all 24 answers (Maria/Ghina).
+6. Optional: `diff_recrawl.py` for a full G7; `--offline` demo cache.
+
+#### Orientation for a new session
+
+Read in this order: **`VERIFY.md`** (how to check everything, incl. how to catch me being wrong)
+→ **`RUN.md`** (launch + verified demo prompts) → **`report/REPORT.md`** (the argument and every
+number) → **`prompts/ITERATION_LOG.md`** (3 iterations + 2 standing failure modes) → this file.
+
+Never fill in a human sign-off. Gates are allowed to fail — G2 sat at an honest FAIL until a
+validated fix raised it, and G4 still fails 2/4 on purpose.
 
 ---
 _(historical planning log below — CURRENT STATE above supersedes it for "where are we now")_
@@ -337,6 +394,32 @@ unless a member picks one up.
   assumed) — expected, not a blocker.
 
 ## Session log (newest first)
+
+- **2026-07-28 (build day 4 — G4, G6, G9, G8, report; Ali+Gaby's streams absorbed):** Six gates
+  moved. **G4** built from two stubs (indexer + hybrid retrieval + dev-only calibration + Wilson
+  CI); **G6 PASS 8/8** (live index, live REST, both external calls in trace, `resolve_document`
+  and `agents/runtime.py` written); **G9 PASS 5/5** (full Streamlit UI replacing the 8-line stub,
+  incl. the A29 escaping criterion); **G8 run** (24 cases, 36.4% failure, 0 hallucinations, p50
+  1.56 s, adversarial 6/6); **REPORT.md written, all 8 sections**; `ITERATION_LOG` with 3
+  iterations; `VERIFY.md` and `RUN.md` written. Ghina's Job C landed → **core-44** +
+  `gold_claims.json` (8 expert-written cases).
+  **Bugs found by running the thing, not by reading it:** (1) the intent prompt was never sent —
+  `system_prompt` defaulted to `""` — so the model classified with no instructions and refused
+  Ghina's own religion-change question; (2) `check_g4` scored abstention on cosine while the live
+  node thresholded on RRF, so **the gate passed while the agent refused a valid query** — both now
+  share `classify_outcome()`; (3) two working external calls rendered as `None` in the trace, which
+  is the demo screen; (4) the encoder defaulted to BGE-M3, which is **not installed** — a plain
+  `streamlit run` would have failed on demo day, invisible to me because I always set the env var;
+  (5) `streamlit` is not on PATH, producing a "localhost refused to connect" that looked like a
+  broken app.
+  **Two retractions, both kept in the record rather than quietly corrected:** top-1 "100%" was an
+  artefact of a gold set made of bare titles (cos 1.000) → honest 88%; and "recall is mechanically
+  capped at 80%" was wrong → a validated conjoined-document rule reached 90% and **G2 FULLY
+  PASSED**. Pattern worth carrying into the report and the viva: **every time the test data became
+  more independent, measured performance got worse** (3/8 on the experts' own questions vs 88% on
+  ours).
+  **Next: G11 demo rehearsal (human-only, top priority), G10 repo hygiene, regenerate
+  `bakeoff.md` to unblock Maria's G0 sign-off, finish G3's lookup table.**
 
 - **2026-07-27 (splitter fix + conditional detector + G5 PASSED):** Three pieces.
   **(1) Splitter:** `is_heading()` now scans every line with the colon optional and a 30-char cap
