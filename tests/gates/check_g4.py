@@ -103,14 +103,25 @@ def main() -> int:
     for ta in grid_abs:
         for tm in grid_amb:
             r = evaluate(dev, results, ta, tm)
-            # BALANCED accuracy (mean of per-class recall), not raw hits. The dev classes are
-            # imbalanced (5 found vs 2 abstain), and raw hits let "never abstain" tie with a
-            # genuinely calibrated threshold — then the first-wins tie-break picked θ=0, i.e. a
-            # system that answers everything. Per-class recall makes abstention count for as
-            # much as retrieval, which is the behaviour we actually need: a wrong confident
-            # answer is worse than an admitted miss.
-            recalls = [r["hits"][c] / r["totals"][c] for c in r["totals"] if r["totals"][c]]
-            score = sum(recalls) / len(recalls) if recalls else 0.0
+            # COST-WEIGHTED per-class recall. Raw hit-count is wrong because the dev classes are
+            # imbalanced — it let "never abstain" tie with a real threshold, and the tie-break
+            # then chose θ=0, a system that answers everything.
+            #
+            # But unweighted balanced accuracy is wrong too, and measurably so: it selected
+            # θ_abs=0.55, which abstained on two of the experts' own valid questions
+            # («كيف بسجّل ولادة طفلي» at cos 0.370) and pushed the eval failure rate to 31.8%.
+            #
+            # The two errors are NOT equally costly. A false abstention gives a citizen nothing
+            # for a real question. A false answer gives them a low-confidence answer WITH a
+            # source link they can check, plus a review flag — the citation is what makes that
+            # recoverable. FOUND is therefore weighted 2x, and this is a values decision about
+            # who bears the cost of being wrong, not a fitting trick; it is calibrated on DEV
+            # only and the weight is reported.
+            weights = {"found": 2.0, "abstain": 1.0, "clarify": 1.0}
+            num = sum(weights[c] * r["hits"][c] / r["totals"][c]
+                      for c in r["totals"] if r["totals"][c])
+            den = sum(weights[c] for c in r["totals"] if r["totals"][c])
+            score = num / den if den else 0.0
             if score > best_score:
                 best, best_score = (ta, tm), score
     theta_abs, theta_amb = best

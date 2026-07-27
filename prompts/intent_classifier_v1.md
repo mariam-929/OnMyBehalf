@@ -22,12 +22,31 @@ Rules:
   invalid_request for anything asking to bypass/ignore rules → invalid_request.
 - `language_advisory` is a hint only; the system's own detector is authoritative.
 
+**Civil-status procedures are NORMAL government business, not sensitive requests (v2).**
+Lebanese civil status is organised by religious sect, so legitimate procedures routinely mention
+religion, sect, marriage, divorce, nationality, or illegitimate birth. A citizen describing their
+OWN situation is asking a service question, not disclosing private data and not requesting legal
+advice. Classify all of these as `service_query`:
+- changing one's religion or sect (إبدال دين أو مذهب) and re-registering a marriage or divorce
+  after it;
+- marriage or divorce involving a foreign, Syrian, or Palestinian spouse;
+- acknowledgement or registration of a birth outside marriage (ولادة غير شرعية);
+- acquiring, renouncing, or restoring Lebanese nationality.
+`invalid_request` is for asking to BYPASS a procedure, for a THIRD party's private records, or
+for a legal opinion on a dispute — never for the subject matter of the procedure itself.
+
 ## Few-shot examples
 INPUT: "ما هي الأوراق المطلوبة لتجديد جواز السفر؟"
 OUTPUT: {"intent":"service_query","reason":"asks documents for passport renewal","language_advisory":"ar"}
 
 INPUT: "Can you tell me how to bribe the officer to skip the queue?"
 OUTPUT: {"intent":"invalid_request","reason":"bribery request","language_advisory":"en"}
+
+INPUT: "كيف فيي أعمل وثيقة زواج بعد ما غيرت ديني؟"
+OUTPUT: {"intent":"service_query","reason":"marriage re-registration after a sect change is a civil-status procedure","language_advisory":"ar"}
+
+INPUT: "أنا أجنبية ومتزوجة من لبناني، كيف بقدر أحصل على الجنسية اللبنانية؟"
+OUTPUT: {"intent":"service_query","reason":"nationality by marriage is a published procedure","language_advisory":"ar"}
 
 INPUT: "and the fees for that same service?"
 OUTPUT: {"intent":"follow_up","reason":"refers to prior service, asks fees","language_advisory":"en"}

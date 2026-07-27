@@ -1,6 +1,6 @@
 {
   "query": "شو المستندات المطلوبة لإعادة قيد مطلقة؟",
-  "elapsed_s": 29.13,
+  "elapsed_s": 27.56,
   "envelope": {
     "action": "answer",
     "reasoning": "Matched the query to a Dawlati service and assembled its published requirements.",
@@ -25,7 +25,7 @@
           "status": "unchanged",
           "source_modified_gmt": "2026-07-13T14:10:39",
           "snapshot_modified_gmt": "2026-07-13T14:10:39",
-          "checked_at": "2026-07-27T22:01:54.329550+00:00",
+          "checked_at": "2026-07-27T22:19:01.589538+00:00",
           "note": "unchanged since snapshot 2026-07-13T14:10:39; change-detection only, substantive currency not guaranteed"
         },
         "record_status": "complete"
@@ -116,26 +116,26 @@
   "trace_events": [
     {
       "node": "detect_language",
-      "at": "2026-07-27T22:01:53.166389+00:00",
+      "at": "2026-07-27T22:19:00.652883+00:00",
       "arabic_chars": 33,
       "latin_chars": 0,
       "decided": "ar"
     },
     {
       "node": "validate_input",
-      "at": "2026-07-27T22:01:53.167388+00:00",
+      "at": "2026-07-27T22:19:00.653882+00:00",
       "ok": true
     },
     {
       "node": "classify_intent",
-      "at": "2026-07-27T22:01:53.920452+00:00",
+      "at": "2026-07-27T22:19:01.176506+00:00",
       "intent": "service_query",
       "mode": "model",
-      "latency_s": 0.753
+      "latency_s": 0.522
     },
     {
       "node": "retrieve",
-      "at": "2026-07-27T22:01:54.056321+00:00",
+      "at": "2026-07-27T22:19:01.315106+00:00",
       "mode": "live",
       "n": 5,
       "outcome": "found",
@@ -149,7 +149,7 @@
     },
     {
       "node": "research",
-      "at": "2026-07-27T22:01:58.153338+00:00",
+      "at": "2026-07-27T22:19:05.410819+00:00",
       "mode": "live",
       "n_documents": 5,
       "tool_calls": 7,
@@ -189,7 +189,7 @@
     },
     {
       "node": "compose",
-      "at": "2026-07-27T22:01:58.154341+00:00",
+      "at": "2026-07-27T22:19:05.411832+00:00",
       "confidence": 0.8,
       "confidence_reasons": [
         "base=core",
@@ -200,12 +200,12 @@
     },
     {
       "node": "validate_schema",
-      "at": "2026-07-27T22:01:58.154341+00:00",
+      "at": "2026-07-27T22:19:05.411832+00:00",
       "ok": true
     },
     {
       "node": "respond",
-      "at": "2026-07-27T22:01:58.155587+00:00",
+      "at": "2026-07-27T22:19:05.412832+00:00",
       "action": "answer"
     }
   ]

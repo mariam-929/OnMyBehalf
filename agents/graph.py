@@ -21,6 +21,7 @@ from agents.nodes import (
     classify_intent, compose, detect_language, research, respond, respond_clarify,
     respond_error, respond_invalid, respond_not_found, retrieve, validate_input, validate_schema,
 )
+from agents.prompts import load_prompt
 from agents.state import AgentState
 
 
@@ -58,7 +59,12 @@ def build_graph(adapter=None, search_fn=None, tools=None, curated_core=None):
 
     g.add_node("detect_language", detect_language)
     g.add_node("validate_input", validate_input)
-    g.add_node("classify_intent", lambda s: classify_intent(s, adapter=adapter))
+    # The prompt is LOADED from prompts/intent_classifier_v1.md, not passed as "".
+    # It was empty in the first wiring, so the model classified with no instructions at all and
+    # refused a legitimate religion-change question (ITERATION_LOG v1->v2).
+    intent_prompt = load_prompt("intent_classifier")
+    g.add_node("classify_intent",
+               lambda s: classify_intent(s, adapter=adapter, system_prompt=intent_prompt))
     g.add_node("retrieve", lambda s: retrieve(s, search_fn=search_fn))
     g.add_node("research", lambda s: research(s, tools=tools))
     g.add_node("compose", lambda s: compose(s, curated_core=curated_core))
