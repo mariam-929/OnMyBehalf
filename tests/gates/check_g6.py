@@ -82,9 +82,16 @@ def main() -> int:
     # ---- 3. out-of-scope does not fabricate -------------------------------
     oos = answer(OUT_OF_SCOPE)
     oos_env = Envelope.model_validate(oos["final_response"])
-    # Either it abstains, or it answers with low confidence AND a citation. Both are honest;
-    # a confident answer with no source would not be.
-    honest = (oos_env.action in {"service_not_found", "clarification_needed"}
+    # THREE honest outcomes, and the check originally allowed only two.
+    #   service_not_found / clarification_needed -> admits it cannot answer
+    #   invalid_request                          -> "I only cover Lebanese government
+    #                                               procedures" is a correct refusal for a bank
+    #                                               account, not a failure
+    #   answer with LOW confidence AND a citation -> the user can verify it
+    # What must NOT happen is a confident answer with no source. A refusal definitionally
+    # fabricates nothing; the first version of this check just failed to encode that, and
+    # flagged the model for behaving correctly once the intent prompt was actually wired in.
+    honest = (oos_env.action in {"service_not_found", "clarification_needed", "invalid_request"}
               or (oos_env.confidence <= 0.5
                   and bool(getattr(oos_env.output, "service", None))))
     results.append(("out-of-scope query does not fabricate", honest,
