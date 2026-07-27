@@ -36,7 +36,7 @@ key in `.env`, gitignored & validated). Run anything with
 | **G0** model bakeoff | ✅ AUTO PASS (gpt-oss-120b wins) — ⏳ needs **Maria** Arabic sign-off |
 | **G1** catalog (249) | ✅ **FULLY PASSED** (Mariam signed) |
 | **G1b** contacts (126) | ✅ **FULLY PASSED** (Mariam signed) + enriched (opening_hours 23, hotlines 6) |
-| **G2** corpus (193 records) | ✅ AUTO PASS integrity — ⏳ needs **Maria/Ghina** field-check + spike_gold verify |
+| **G2** corpus (193 records) | ⚠️ **AUTO FAIL** (recall 80% < 85%) — ✅ **HUMAN CHECK COMPLETE** (Maria+Ghina, both directions reviewed 2026-07-27) |
 | G3–G11 | NOT STARTED |
 
 **Key facts a new session must know:**
@@ -53,6 +53,9 @@ key in `.env`, gitignored & validated). Run anything with
 **NEXT ACTIONS (two parallel tracks):**
 1. **DATA/human (critical path, Maria+Ghina):** rebuild core-40 from `core40_candidates.md` → verify
    `spike_gold.json` (correct `gold_documents`, set `verified=true`) → `check_g2.py` → G2 + G3.
+   **Onboarding written: `docs/GUIDE_MARIA_GHINA.md` (non-technical, no Python needed) + a
+   fill-in-the-blanks worksheet `report/evidence/g2_worksheet.md` (8 services, machine output
+   pre-listed). Maria/Ghina hand the worksheet back; Mariam transcribes into `spike_gold.json`.**
 2. **BUILD track (not started, independent):** **G5 — graph skeleton** on synthetic fixtures
    (`agents/graph.py` + nodes). Needs no corpus; can start immediately.
 3. Outstanding quick sign-offs: **Maria** (G0 Arabic read), then freeze `pip freeze` pins.
@@ -72,7 +75,7 @@ _(historical planning log below — CURRENT STATE above supersedes it for "where
 | G2 | Corpus quality (REFRAMED: ajax, not crawl) | AUTO PASS (integrity) | 2026-07-25 | 193 corpus records generated, 180 complete, 0 overwrite, check_g2.py | **PENDING: Maria/Ghina** verify spike_gold + field-check 3 |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
 | G4 | Retrieval calibrated (top-1 + abstention) | NOT RUN | — | — | — |
-| G5 | Graph skeleton (BUILD track, fixtures) | NOT RUN | — | — | n/a |
+| G5 | Graph skeleton (BUILD track, fixtures) | ✅ **AUTO PASS** | 2026-07-27 | `check_g5.py` 9/9: compiles (14 nodes); all 5 terminal actions schema-valid w/ traces; 64 unit tests green | **n/a — no human check** |
 | G6 | Agent end-to-end (gold + 2 ext calls) | NOT RUN | — | — | — |
 | G7 | Freshness & HITL | NOT RUN | — | — | — |
 | G8 | Eval (claim-level gold, 24-answer audit) | NOT RUN | — | — | — |
@@ -81,6 +84,13 @@ _(historical planning log below — CURRENT STATE above supersedes it for "where
 | G11 | Demo readiness (human-only) | NOT RUN | — | — | — |
 
 **Pending human checks queue:**
+- ~~**G2 — Maria/Ghina**~~ ✅ **HUMAN CHECK COMPLETE 2026-07-27.** Both worksheets returned and
+  cross-reviewed (Ghina reviewed Maria's 4; Maria reviewed Ghina's 4 — all AGREE, with substantive
+  additions). Reviewer ≠ producer satisfied in both directions. Transcribed to `data/spike_gold.json`
+  (8 services verified). **The AUTO half now FAILS honestly: 80% pooled recall (32/40 docs) vs the
+  ≥85% bar; precision 74% (11 of 43 extracted items are phantoms); human verdict BAD on 11464,
+  11554, 11476.** Gate closes only after the splitter fix lifts recall — NOT by re-reviewing.
+  Worksheets: `report/evidence/g2_worksheet_maria_FULL.md`, `g2_worksheet_ghina (Final).md`.
 - **G2 — Maria/Ghina (reviewer Ghina):** corpus generated (193 records, `check_g2.py` integrity
   PASS). Extraction *correctness* still needs a human: open the live guide, diff **3 civil-registry
   core services field-by-field** (11464 بطاقة هوية, 11554 تسجيل ولادة, + one more) + skim 7; in
@@ -94,6 +104,12 @@ _(historical planning log below — CURRENT STATE above supersedes it for "where
   requires reviewer ≠ producer, and this check is specifically an Arabic-quality read (why the
   owners table names Maria, a designated Arabic expert). Her read is recorded as a producer
   self-check; the gate stays open until Maria signs. Not blocking any work in the meantime.
+  **⚠ BLOCKED ON AN ARTIFACT (found 2026-07-26): the 5 Arabic outputs were printed to console only —
+  `check_g0.py` persists nothing but `data/model_limits.json` (aggregate counts).
+  `report/evidence/bakeoff.md` does not exist. Maria cannot review what wasn't saved. ACTION
+  (Mariam): re-run `check_g0.py` capturing per-fixture input → classification → raw output into
+  `report/evidence/bakeoff.md`, then send to Maria. This also closes the Evidence-register row
+  "Model decision", still `[ ]`.**
 - ~~G1b — Ghina~~ ✅ **SIGNED by Mariam 2026-07-25** (reviewer ≠ producer; Ali produced). Verified
   live: ministry popups have location + official site + opening hours + portal links but **no phone**;
   the 15 hotlines live in a separate "Useful Numbers" tab. Crawl accurate. **G1b FULLY PASSED.**
@@ -217,8 +233,32 @@ unless a member picks one up.
 | 2026-07-25 | **MODEL_ID = openai/gpt-oss-120b** (G0 bakeoff winner; owner Mariam) | 10/10 schema-valid @0.55s p50 vs qwen3.6 9/10 @1.38s (1 json_validate_failed, Preview). GPT-OSS: strict schema, 2.5× faster, not Preview. Both 8K TPM. Also fixed adapter (strict `additionalProperties`) + UTF-8 console. |
 | 2026-07-25 | **Corpus generated (193 records); G2 reframed + `check_g2.py`; G2 integrity AUTO PASS** | Ran the ingester for real → 193 `data/corpus/*.json` (180 complete, 0 overwrite). G2 no longer a page-crawl spike (pages empty) — now extraction-correctness: `check_g2.py` integrity PASS, recall-vs-gold PENDING human. `data/spike_gold.json` pre-filled (8 svcs) for Maria/Ghina to verify. VERIFICATION G2 updated to ajax reality. |
 | 2026-07-25 | **Core-40 candidates drafted from the real corpus** → `report/evidence/core40_candidates.md` | 43 civil-registry services exist (بطاقة هوية 9 docs, تسجيل ولادة, personal-status set) + 52 interior/27 culture/101 agriculture complete. Grounds the Maria/Ghina rebuild (verify, not invent). Passport/license confirmed absent across all post types. |
+| 2026-07-27 | **Splitter fixed for the 2 MECHANICAL failure classes; the 2 SEMANTIC ones accepted as a documented limitation** | `is_heading()` now scans every line (colon optional, 30-char cap so the real document «المستندات المشار إليها في البنود…» survives) and recognises Roman-numeral case headers. Re-ingested: exactly the 4 human-flagged phantoms dropped, nothing else. **Precision 74% → 82%.** Recall stays **80%** and is CAPPED there mechanically: all 7 residual misses are documents conjoined by «و» inside one line (#11476 «…جواز سفر الزوجه الصالح **و**وثيقه ولاده…», #11464 doc 8). Splitting on «و» — Arabic's most common conjunction and also a bound prefix — would corrupt the other 180 records to rescue 7 items 2 days before submission. Same root cause as the conditional-structure finding: a flat `list[str]` cannot express conjunction any more than it can express disjunction. **G2 remains an honest AUTO FAIL (80% < 85%) with the human check complete.** |
 
 ## Findings / surprises
+
+- **2026-07-27 — ⭐ STRUCTURAL: a flat document list cannot represent these services (Maria + Ghina,
+  G2 human check, independently raised by both).** The deepest G2 finding is not extraction noise —
+  it is a **data-model mismatch**. `CorpusRecord.sections.required_documents` is `list[str]`, but the
+  source encodes conditional logic that a flat list destroys. Four constraint types observed:
+  (1) **case/branch by applicant type** — #11528 has three cases (minor / adult / outside the legal
+  window) behind the I·II·III headings; #11476 branches general / Syrian wife / Palestinian wife,
+  each with different documents; (2) **either/or within one requirement** — اقامة صالحة **أو**
+  تأشيرة دخول; التعميم 1/84 **أو** قرار قنصلي — one requirement, several valid documents, not
+  several mandatory ones; (3) **eligibility preconditions** — #11476 requires the marriage registered
+  ≥1 year before applying; (4) **document recency windows differing by case** — Syrian بيان قيد
+  <6 months, Palestinian <3 months. **#11476 exhibits all four in one service.**
+  Consequence: flattening turns "bring A or B" into "bring A and B", and drops the branch a citizen
+  is actually in. **Not fixable by 2026-07-29** — schema change + re-extraction + re-verification.
+  DECISION NEEDED: report as a named limitation with #11476 as the worked example (recommended), or
+  attempt a `conditional`/`applies_to` field. Note (4) also touches FR6: recency applies to the
+  CITIZEN's documents, not only to source freshness — `check_freshness` does not cover it.
+- **2026-07-27 — fees missed by the crawl on 3 services (Maria, G2 Part 2 review).** #11476 carries
+  **two** fees: 50,000 ل.ل per certified-copy document AND **20,000,000 ل.ل collected only if the
+  application is approved** — a large CONDITIONAL fee (this resolves the "20M looks like a digit
+  error" query: the amount is real, the conditionality is what was lost). #11528 and #11518 are both
+  **لا رسوم (free)** and were left blank. Blank ≠ free: the agent must distinguish "no fee" from
+  "fee not published", and currently cannot.
 
 - **2026-07-25 — Dawlati Cloudflare 403s VPN/datacenter IPs (Ali, env setup).** Every dawlati.gov.lb
   path — REST endpoints AND the plain homepage — returned `403 / server: cloudflare` ("Attention
@@ -273,6 +313,46 @@ unless a member picks one up.
 
 ## Session log (newest first)
 
+- **2026-07-27 (splitter fix + conditional detector + G5 PASSED):** Three pieces.
+  **(1) Splitter:** `is_heading()` now scans every line with the colon optional and a 30-char cap
+  (so the real document «المستندات المشار إليها…» survives) + Roman-numeral case headers.
+  Re-ingested 193; exactly the 4 human-flagged phantoms dropped. **Precision 74%→82%**; recall
+  stays 80% and is mechanically capped (residual misses are documents conjoined by «و»).
+  **(2) Conditional detector** (`tools/conditional_detect.py` + `ConditionalFlag`,
+  `conditional_structure` in ReviewReason/QueueEvent, `AnswerOut.conditional_flags`): carries the
+  G2 structural finding into every answer — caveat + confidence penalty (capped 0.40) + review
+  queue. `either_or` is marked low-confidence (keys on ubiquitous «أو») so it never escalates
+  alone. **113/180 (63%) flagged; 46/180 (26%) high-confidence.** Verified #11476 shows all four
+  types and drops 0.9→0.30; **#11532, the demo service, shows ZERO flags** (no false positive on
+  the demo path). **(3) G5 AUTO PASS** — `agents/graph.py` (14 nodes, 5 terminal branches) +
+  `agents/nodes/*` + `tools/{duration,rrf,review_queue}.py`; every dependency defaults to None so
+  the graph runs with no key, no network, no index. **64 unit tests green; `check_g5.py` 9/9.**
+  The tests caught 2 real bugs before they shipped: `_BRANCH` missing `re.M` (Roman-numeral
+  branches invisible on multi-line text) and `review_queue` re-opening a portalocker-held file
+  (PermissionError under Windows mandatory locks). **Next: G6 needs Ali's index; report §§1–3 can
+  start now.**
+
+- **2026-07-26 (non-technical onboarding for Maria & Ghina):** Wrote `docs/GUIDE_MARIA_GHINA.md` —
+  A-to-Z guide for the two domain experts, deliberately **excluding** the Python/venv setup (their
+  three jobs need a browser and a text file; a 500 MB torch install for a read-Arabic-pages task is
+  bad ROI at T-3 days). Covers: repo access, the 4 files that matter, VPN-off rule, the
+  passport/licence-absent + 3-of-22-ministries context, the three jobs (G0 Arabic sign-off; G2
+  extraction check; G3 core-40 rebuild), reviewer≠producer, and three no-friction ways to hand work
+  back. Generated **per-person** worksheets `report/evidence/g2_worksheet_{maria,ghina}.md` — the 8
+  `spike_gold.json` services rendered as fill-in-the-blanks (machine documents numbered, verdict
+  blanks OK/WRONG/NOT A DOCUMENT/SPLIT, MISSING section, fees/where-to-apply for the 3 deep ones) so
+  neither expert has to touch JSON; Mariam transcribes answers back into `spike_gold.json`.
+  **G2 split** (balanced on effort — a field-by-field doc ≈ 3× a skim doc, so 15 docs/2 deep vs
+  28 docs/1 deep is roughly even): Maria 11464 + 11554 (deep) + 11704 + 11674; Ghina 11532 (deep) +
+  11528 + 11476 + 11518. Each file has a Part 2 review block for the other's four → reviewer ≠
+  producer satisfied within the pair. **G3 split by procedure family:** Maria = person records
+  (هوية/ولادة/وفاة/جنسية, 16 rows), Ghina = relationship + register records (زواج/طلاق/بيان قيد,
+  22 rows, incl. 8 near-identical وثيقة زواج variants); 4 demo questions each, one deliberately
+  messy. Two specific bugs flagged for hunting: doc 2 of #11464 has a stray `3.` mid-sentence
+  (likely a merged pair), and #11674 extracted zero documents. **Found a blocker for G0: the bakeoff's 5 Arabic outputs were never persisted**
+  (`check_g0.py` writes only aggregate counts to `model_limits.json`; `report/evidence/bakeoff.md`
+  does not exist) — Maria's sign-off is un-doable until Mariam re-runs it capturing per-fixture
+  output. Logged in the pending-checks queue. Jobs B and C are unblocked and can start now.
 - **2026-07-25 (G1b enhancements + handoff prep):** Mariam signed off G1 (5 URLs) and G1b (contacts
   live-review). Per her review, added two contact enhancements: `opening_hours` captured (23
   ministries) + Useful-Numbers hotlines joined to ministries (6 gained a phone; no false matches).

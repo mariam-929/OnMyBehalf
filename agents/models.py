@@ -116,7 +116,22 @@ class ResearchPlan(BaseModel):
 ReviewReason = Literal[
     "stale_source", "unverified_source", "unresolved_document",
     "incomplete_record", "schema_retry", "ambiguous_match", "newer_version_available",
+    "conditional_structure",
 ]
+
+
+class ConditionalFlag(BaseModel):
+    """A conditional construct in the source that `required_documents: list[str]` cannot express.
+
+    Found at G2 (2026-07-27) by Maria + Ghina and measured across the corpus: 90/180 services
+    (50%) carry at least one. A flat list silently turns "bring A OR B" into "bring A AND B",
+    merges branches that apply to different applicants, and drops per-case recency windows —
+    so the agent can be confidently wrong. We cannot fix the data model before the deadline;
+    we DETECT and DISCLOSE instead (caveat + confidence penalty + review queue).
+    """
+    kind: Literal["branch", "either_or", "precondition", "recency"]
+    evidence: str          # the matched source snippet, for the caveat and the report
+    high_confidence: bool  # `either_or` keys on «أو», which is ubiquitous -> treated as weaker
 
 
 class ContactOut(BaseModel):
@@ -165,6 +180,7 @@ class AnswerOut(BaseModel):
     required_documents: list[ResolvedDocument] = Field(default_factory=list)
     time_estimate: TimeEstimate
     caveats: list[str] = Field(default_factory=list)
+    conditional_flags: list[ConditionalFlag] = Field(default_factory=list)
 
 
 class ClarifyOut(BaseModel):
@@ -202,7 +218,7 @@ class QueueEvent(BaseModel):
     event_id: str
     event_type: Literal[
         "stale_source", "unreachable_source", "unresolved_document",
-        "extraction_incomplete", "changed_on_recrawl",
+        "extraction_incomplete", "changed_on_recrawl", "conditional_structure",
     ]
     subject_post_id: Optional[int] = None  # None for a doc that isn't a known service
     subject_label: str

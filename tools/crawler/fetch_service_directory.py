@@ -64,8 +64,27 @@ TIMEOUT_S = 60
 _ITEM_NUM = re.compile(r"^\s*(?:\d+\s*[.\-–)]|[•●▪◦*])")
 # a dash-led SUB-item: continuation of the entry above (e.g. the pest species under one document)
 _SUB_ITEM = re.compile(r"^\s*[-–—]\s*")
-# heading line that introduces the list rather than being a document
-_HEADING = re.compile(r"(المستندات|الوثائق|المرفقات|المطلوب)\s*.*:\s*$")
+# heading line that introduces the list rather than being a document.
+# Checked on EVERY line, not just the first (G2 2026-07-27: #11554 carries a bare
+# "المستندات المطلوبة" at position 3, which the old first-line-only + mandatory-colon rule let
+# through as a document). The length cap is load-bearing: "المستندات المشار إليها في البنود
+# 1،2،3،4 أعلاه" is a genuine document that starts with the same keyword, so keyword alone
+# cannot decide — only a SHORT bare line is a heading.
+_HEADING = re.compile(r"^\s*(?:المستندات|الوثائق|المرفقات|المطلوبات)"
+                      r"(?:\s+(?:المطلوبة|اللازمة|المرفقة))?\s*:?\s*$")
+_HEADING_MAX_LEN = 30
+
+# Roman-numeral CASE header: "I – ولادة القاصر", "II- ولادة الراشد", "III – …".
+# These introduce a conditional case (a branch), not a document (G2 2026-07-27, #11528).
+# No length cap here — case III's label is a long sentence carrying its own precondition.
+_ROMAN_CASE = re.compile(r"^\s*(?:[IVX]{1,4})\s*[-–—.):]")
+
+
+def is_heading(line: str) -> bool:
+    """True if the line introduces the list (or a case within it) rather than being a document."""
+    if _ROMAN_CASE.match(line):
+        return True
+    return len(line) <= _HEADING_MAX_LEN and bool(_HEADING.match(line))
 
 
 def html_to_lines(fragment: str | None) -> list[str]:
@@ -112,9 +131,8 @@ def parse_documents(fragment: str | None) -> list[str] | None:
     if not lines:
         return None
 
-    # drop a leading "المستندات المطلوبة:" style heading
-    if lines and _HEADING.search(lines[0]):
-        lines = lines[1:]
+    # drop list headings and Roman-numeral case headers wherever they appear (not just line 0)
+    lines = [ln for ln in lines if not is_heading(ln)]
     if not lines:
         return None
 

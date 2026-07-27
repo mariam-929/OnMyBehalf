@@ -13,12 +13,23 @@ class AgentState(TypedDict, total=False):
     query: str
     language: str                      # "ar" | "en" (FR1 authoritative detector)
     intent: Optional[IntentResult]
+    # guardrail / routing outcomes (set by nodes, read by the conditional edges)
+    invalid: Optional[dict]            # InvalidOut dumped -> routes to respond_invalid
+    retrieval_outcome: str             # "found" | "ambiguous" | "not_found"
+    schema_ok: bool
+    error_stage: str
+    error_detail: str
     # retrieval / research
     retrieved: list[RetrievedCandidate]
     service_record: Optional[CorpusRecord]
     resolved_documents: list[ResolvedDocument]
+    service_freshness: Optional[dict]  # FreshnessResult dumped (deterministic system step, N3)
     live_lookup: Optional[LiveLookupResult]
     replans_used: int
+    candidates: list[dict]             # ClarifyOut candidates
+    suggestions: list[dict]            # NotFoundOut suggestions
+    time_estimate: Optional[dict]
+    reasoning: str
     # session memory (FR11)
     messages: list[dict]               # last 6 turns
     user_held_documents: list[str]

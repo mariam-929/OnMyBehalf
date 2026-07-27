@@ -31,13 +31,31 @@ from agents.models import CorpusRecord  # noqa: E402
 from tools.text_norm import normalize_ar  # noqa: E402
 
 
+def _hits(needles: list[str], haystack: list[str]) -> int:
+    """How many `needles` appear in `haystack` under lenient substring matching."""
+    n = {normalize_ar(x) for x in needles}
+    h = {normalize_ar(x) for x in haystack}
+    return sum(1 for x in n if any(x in y or y in x for y in h))
+
+
 def doc_recall(machine: list[str], gold: list[str]) -> float:
     if not gold:
         return 1.0
-    g = {normalize_ar(x) for x in gold}
-    m = {normalize_ar(x) for x in machine}
-    hit = sum(1 for x in g if any(x in y or y in x for y in m))
-    return hit / len(g)
+    return _hits(gold, machine) / len(gold)
+
+
+def doc_precision(machine: list[str], gold: list[str]) -> float:
+    """Share of EXTRACTED items that are real documents.
+
+    Recall alone cannot fail on the errors the G2 humans actually found (2026-07-27): section
+    headings, Roman-numeral markers, sentence fragments and procedural instructions emitted AS
+    documents. Those are precision errors, and a phantom document is as harmful to a citizen as
+    a missing one — they go hunting for something that does not exist. Measured and reported;
+    the gate threshold stays on recall (SCOPE G2) so the bar is not moved retroactively.
+    """
+    if not machine:
+        return 1.0
+    return _hits(machine, gold) / len(machine)
 
 
 def main():
@@ -75,11 +93,31 @@ def main():
         gold = json.loads(sg.read_text(encoding="utf-8"))
         verified = [s for s in gold.get("services", []) if s.get("verified")]
         if verified:
-            recalls = [doc_recall(s["machine_documents"], s["gold_documents"]) for s in verified]
-            avg = sum(recalls) / len(recalls)
-            recall_ok = avg >= 0.85
-            print(f"  [{'PASS' if recall_ok else 'FAIL'}] extraction recall {avg:.0%} on "
-                  f"{len(verified)} human-verified services (>=85%)")
+            # MICRO (pooled over all gold documents) is the honest figure and the one the gate
+            # judges. The former macro-average gave a 0-document service the same weight as a
+            # 9-document one, so free 100%s on trivial services masked real misses: on the
+            # 2026-07-27 sample macro read 91% (PASS) while pooled read 82% (FAIL). Both are
+            # printed so the gap stays visible rather than being silently smoothed away.
+            g_hit = sum(_hits(s["gold_documents"], s["machine_documents"]) for s in verified)
+            g_tot = sum(len(s["gold_documents"]) for s in verified)
+            m_hit = sum(_hits(s["machine_documents"], s["gold_documents"]) for s in verified)
+            m_tot = sum(len(s["machine_documents"]) for s in verified)
+            micro = g_hit / g_tot if g_tot else 1.0
+            precision = m_hit / m_tot if m_tot else 1.0
+            macro = sum(doc_recall(s["machine_documents"], s["gold_documents"])
+                        for s in verified) / len(verified)
+            recall_ok = micro >= 0.85
+            print(f"  [{'PASS' if recall_ok else 'FAIL'}] extraction recall (micro, pooled) "
+                  f"{micro:.0%} on {len(verified)} human-verified services "
+                  f"({g_hit}/{g_tot} documents, >=85%)")
+            print(f"  info: macro-average recall {macro:.0%} "
+                  f"(per-service mean — inflated by low-document services; NOT the gate)")
+            print(f"  info: precision {precision:.0%} ({m_hit}/{m_tot} extracted items are real "
+                  f"documents) — {m_tot - m_hit} phantom items (headings/fragments/instructions)")
+            bad = [s for s in verified if s.get("human_verdict") == "BAD"]
+            if bad:
+                print(f"  info: human verdict BAD on {len(bad)}/{len(verified)} services: "
+                      f"{', '.join(str(s['post_id']) for s in bad)}")
         else:
             print("  [PENDING] spike_gold.json exists but 0 services verified — "
                   "Maria/Ghina must correct gold_documents + set verified=true.")

@@ -3,6 +3,10 @@
 Team: **Gaby, Mariam, Ali, Ghina, Maria.** Deadline: **Wed Jul 29**. This file tells you where your
 part is, how the work splits, and the workflow. Full plan lives in `docs/`.
 
+> **Maria & Ghina (domain experts):** skip this file and go straight to
+> **`docs/GUIDE_MARIA_GHINA.md`** — an A-to-Z guide for your three jobs that needs **no Python setup
+> at all**. Section 1 below (the dev environment) does not apply to you.
+
 ## 1. First 20 minutes (everyone, once)
 1. Read this file + `docs/PROGRESS.md` ("Where we are" + the gate/owner table + the checklist).
 2. Do `SETUP.md` (clone → venv → `pip install` → `.env` with your Groq key). Everyone should be able
