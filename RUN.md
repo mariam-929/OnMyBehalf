@@ -58,11 +58,32 @@ deterministic intent classifier — but the demo is stronger with the model in t
 
 ## Step 5 — launch
 
+**Use this form — it needs no activation and no PATH:**
+
 ```powershell
-streamlit run app/streamlit_app.py
+& "$env:USERPROFILE\venvs\OnMyBehalf\Scripts\python.exe" -m streamlit run app/streamlit_app.py
 ```
 
-It opens <http://localhost:8501>. To stop it: `Ctrl+C` in the terminal.
+Wait for this banner before opening the browser:
+
+```
+  You can now view your Streamlit app in your browser.
+  Local URL: http://localhost:8501
+```
+
+**No banner means no server.** Read the error printed above it — do not open the browser and
+conclude the app is broken.
+
+**Keep this terminal open.** Streamlit runs in the foreground; closing the window or pressing
+`Ctrl+C` stops the server and the page dies.
+
+<details><summary>Why not the short <code>streamlit run …</code> form?</summary>
+
+`streamlit` is installed **inside the venv only** and is not on the system PATH. If
+`Activate.ps1` silently fails — which it does whenever PowerShell's execution policy blocks
+scripts — then `streamlit run` errors with *"not recognized"*, no server starts, and the browser
+reports **"localhost refused to connect"**. The `python.exe -m streamlit` form cannot hit that.
+</details>
 
 ## Step 6 — warm it up before anyone is watching
 
@@ -107,7 +128,9 @@ and citations still work — only the live source check is disabled.
 | First query hangs ~25 s | encoder loading (normal) | warm up before demoing |
 | `data/corpus is empty` | fresh clone | run Step 3 |
 | Arabic shows as `????` in the terminal | Windows console encoding | `$env:PYTHONIOENCODING="utf-8"` |
-| `streamlit: command not found` | venv not activated | redo Step 2 |
+| **"localhost refused to connect"** | **no server is running** — the launch command failed | scroll up in the terminal for the real error; use the `python.exe -m streamlit` form in Step 5 |
+| `streamlit: command not found` / `not recognized` | venv not activated, and `streamlit` is not on the system PATH | use the `python.exe -m streamlit` form in Step 5 |
+| Page was working, now dead | terminal was closed or `Ctrl+C` pressed | relaunch; keep the terminal open |
 | Port 8501 already in use | an old instance is running | `streamlit run app/streamlit_app.py --server.port 8502` |
 | Answers look right but confidence is low | usually correct — freshness or an unresolved document | open the trace; the deductions are listed |
 
