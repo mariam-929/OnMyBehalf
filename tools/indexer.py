@@ -27,7 +27,13 @@ ROOT = Path(__file__).resolve().parents[1]
 CHROMA_DIR = ROOT / "data" / "chroma"
 CORPUS_DIR = ROOT / "data" / "corpus"
 COLLECTION = "dawlati_v1"
-MODEL_ID = os.environ.get("EMBED_MODEL", "BAAI/bge-m3")
+# LaBSE is the DEFAULT because it is what the reported numbers were measured with and what is
+# actually installed. BGE-M3 was the planned encoder but is a ~2.3 GB download that never
+# completed on the build machine (and saturated the connection badly enough to time out our live
+# REST calls). Defaulting to a model that is not present would make `streamlit run` fail or
+# silently start a multi-gigabyte download — the default must be the thing that works.
+# Override with EMBED_MODEL to compare encoders; the index must be rebuilt after changing it.
+MODEL_ID = os.environ.get("EMBED_MODEL", "sentence-transformers/LaBSE")
 
 CHUNK_CHARS = 1200      # ~500 tokens of Arabic
 CHUNK_OVERLAP = 120     # ~50 tokens
