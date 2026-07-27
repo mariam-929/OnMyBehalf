@@ -87,6 +87,32 @@ def is_heading(line: str) -> bool:
     return len(line) <= _HEADING_MAX_LEN and bool(_HEADING.match(line))
 
 
+# Two documents conjoined by «و» on one line — «…جواز سفر الزوجه الصالح **و**وثيقه ولاده…».
+# The G2 humans wrote these out as separate documents (Ghina, #11476; Maria, #11464 doc 8).
+#
+# Splitting on «و» generally is NOT safe: it is Arabic's commonest conjunction AND a bound
+# prefix, so it appears inside single document names constantly. This rule fires only when «و»
+# directly prefixes a CLOSED LIST of nouns that begin a document. That keeps it a lexical rule,
+# not semantic parsing.
+#
+# Validated before adoption (2026-07-27): the rule performs exactly 11 splits across the whole
+# corpus, all 11 inspected and correct — and 8 of them are on services NO human verified, which
+# is a holdout. #11568 is the strongest evidence: the rule separates «بيان قيد عائلي للمطلقين»
+# from «بيان قيد عائلي لوالدي المطلقة», which Ghina had independently verified as two separate
+# documents on the sibling service #11532. It reproduces a human judgement it was not fitted to.
+# Effect: recall 80% -> 90%, precision 82% -> 81%, 9/180 services touched.
+_DOC_HEAD = (r"(?:صور[ةه]|وثيق[ةه]|بيان|شهاد[ةه]|افاد[ةه]|إفاد[ةه]|محضر|تقرير|طلب|نسخ[ةه]"
+             r"|اقام[ةه]|إقام[ةه])")
+_CONJOINED_DOC = re.compile(r"\s+و(?=" + _DOC_HEAD + r"\b)")
+_TRAILING_PUNCT = re.compile(r"[\s،,؛;]+$")
+
+
+def split_conjoined(line: str) -> list[str]:
+    """Split one line into the documents «و» conjoined. Returns [line] when it fires on nothing."""
+    return [_TRAILING_PUNCT.sub("", p).strip()
+            for p in _CONJOINED_DOC.split(line) if p.strip()]
+
+
 def html_to_lines(fragment: str | None) -> list[str]:
     """<p>a<br/>b</p> -> ['a', 'b'], entities decoded, tags dropped, blanks removed."""
     if not fragment:
@@ -142,7 +168,8 @@ def parse_documents(fragment: str | None) -> list[str] | None:
             docs[-1] = f"{docs[-1]} {line}".strip()
             continue
         cleaned = _ITEM_NUM.sub("", line).strip() or line.strip()
-        docs.append(cleaned)
+        # one line may carry several «و»-conjoined documents
+        docs.extend(split_conjoined(cleaned))
     return [d for d in docs if d] or None
 
 
