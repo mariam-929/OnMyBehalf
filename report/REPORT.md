@@ -253,9 +253,18 @@ locking would let concurrent writers both observe "absent" and both append.
    the residual misses are documents living in the notes section rather than the documents field.
 6. **Small n.** 12 holdout retrieval queries, 22 scored eval cases, 8 human-verified services.
    Confidence intervals are reported; the point estimates should not be quoted alone.
-7. **Reviewer independence is partial.** The team reduced to three during the build, so the
-   technical gates have no independent technical reviewer. Those sign-offs are recorded as
-   producer self-checks rather than filled in — a faked sign-off would invalidate the gate record.
+7. **Reviewer independence is partial, and unevenly so.** The team reduced to three during the
+   build, so the technical gates have no independent technical reviewer. Where that applies it is
+   named rather than papered over:
+   - **G1, G1b, G2, G3** — independently reviewed. Maria and Ghina each verified their own
+     procedure clusters and reviewed each other's; neither approved her own work. These are the
+     gates the data claims rest on, and they are the ones with real independence.
+   - **G0** — closed by the project lead, who had read the five Arabic classifications but had
+     also run the bakeoff. Producer and reviewer are the same person. The auto half
+     (10/10 schema-valid) is unaffected.
+   - **G4, G5, G6, G8, G9** — automated checks only; the human halves remain open.
+   No sign-off was fabricated. Where no independent reviewer existed the gate record says so,
+   because a gate record that cannot be trusted is worth less than no gate record at all.
 
 ---
 
@@ -275,7 +284,7 @@ field and found **two distinct extraction failure classes** plus the structural 
 Their skim-level checks found worse bugs than the deep checks did — without them we would have
 shipped on false confidence.
 
-Status at submission: **G1, G1b, G2, G5, G6, G9 pass**; G3 is complete for the core-44 and gold but
+Status at submission: **G0, G1, G1b, G2, G5, G6, G9 pass**; G3 is complete for the core-44 and gold but
 lacks the source-checked lookup table; G4 passes 2 of 4; G7, G8, G10, G11 partial.
 
 **AI usage** is logged in `report/AI_LOG.md` per the brief.

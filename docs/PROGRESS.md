@@ -58,7 +58,7 @@ they are NOT filled in. REPORT §7.7 states this.
 
 | Gate | State |
 |---|---|
-| G0 bakeoff | AUTO PASS — ⏳ Maria's Arabic sign-off still blocked: `report/evidence/bakeoff.md` was never written (check_g0 only persisted aggregate counts) |
+| G0 bakeoff | ✅ **PASS** — closed 2026-07-28 by Mariam's decision. `report/evidence/bakeoff.md` was never written (check_g0 persisted only aggregate counts); regenerating it is now OPTIONAL evidence-polish, not a blocker |
 | G1 catalog (249) | ✅ FULLY PASSED |
 | G1b contacts (126) | ✅ FULLY PASSED |
 | G2 corpus (193) | ✅ **FULLY PASSED** — recall 90%, precision 81%, human check complete both directions |
@@ -113,8 +113,8 @@ architectural choice, not model restraint. REPORT §6.1 says this; so must anyon
    video. Demo prompts that are VERIFIED to work are in `RUN.md`.
 2. **G10 repo hygiene** — secret-scan script, README refresh, fresh-clone test. `VERIFY.md` has
    the audit commands.
-3. **Regenerate `report/evidence/bakeoff.md`** (~10 min) — unblocks Maria's G0 sign-off and fills
-   the last empty Evidence-register row.
+3. *(optional)* Regenerate `report/evidence/bakeoff.md` (~10 min) — G0 is closed, so this is
+   evidence-polish only: it would fill the last empty Evidence-register row.
 4. **G3 finish** — `document_sources.json` (≥20 rows source-checked) + `check_g3.py`.
 5. **G8 manual audit** of all 24 answers (Maria/Ghina).
 6. Optional: `diff_recrawl.py` for a full G7; `--offline` demo cache.
@@ -136,7 +136,7 @@ _(historical planning log below — CURRENT STATE above supersedes it for "where
 
 | Gate | What | Status | Date | Evidence | Human sign-off |
 |---|---|---|---|---|---|
-| G0 | Env + **per-model bakeoff** + synthetic fixtures (blocks all code) | AUTO PASS | 2026-07-25 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **PENDING: Maria** confirms Arabic (Mariam read them 2026-07-25, but she RAN the bakeoff — producer ≠ reviewer, so it does not close the gate) |
+| G0 | Env + **per-model bakeoff** + synthetic fixtures | ✅ **PASS** | 2026-07-28 | gpt-oss-120b 10/10@0.55s vs qwen3.6 9/10@1.38s; data/model_limits.json | **Mariam 2026-07-28** — closed on her authority as project lead. She read the 5 Arabic classifications 2026-07-25 and found them correct, but she also RAN the bakeoff, so reviewer≠producer is **not** satisfied for this gate. Recorded as a producer self-check promoted to a sign-off by decision, not as an independent review. Listed in REPORT §7.7 with the other partial-independence gates. |
 | G1 | Service catalog (249 posts) | ✅ PASS | 2026-07-25 | data/catalog.json — 249 (195/24/30), 0 dup ids, all modified_gmt; `check_g1.py` 7/7; report/evidence/coverage.md | **Mariam 2026-07-25** (5 URLs load, titles match) |
 | G1b | Contact catalog (/en/directory crawl) | ✅ PASS | 2026-07-25 | 126 ContactRecords, all valid; coverage 100%/95%; contacts_coverage.md | **Mariam 2026-07-25** (verified live: ministries have location+site+hours+portals, no phone; 15 hotlines in Useful Numbers tab). 2 enhancement findings logged |
 | G2 | Corpus quality (REFRAMED: ajax, not crawl) | ✅ **PASS** | 2026-07-27 | 193 records, 180 complete; **recall 90% (36/40), precision 81%**; check_g2.py 5/5 | **Maria + Ghina 2026-07-27** — 8 services verified, cross-reviewed both directions (reviewer≠producer holds each way). Worksheets in report/evidence/ |
@@ -164,20 +164,7 @@ _(historical planning log below — CURRENT STATE above supersedes it for "where
   11522↔11476, 11498↔11560). **Ghina's 27 rows are OUTSTANDING and block G3.** Reminder: the
   existing `gold_claims.seed.json` has only 3 cases and 2 of them are passport-based, so the
   usable gold is effectively **1 vs a required ≥10** — Job C's 8 demo questions are the seed.
-- **G0 — Maria (STILL REQUIRED):** review the 5 Arabic inputs → intent classifications from
-  `gpt-oss-120b` in the bakeoff output (all 5 classified correctly: 4 service_query +
-  1 invalid_request for the injection). Confirm the model handles Arabic correctly and bless
-  `openai/gpt-oss-120b` as the winner. Then G0 is fully signed off. (Auto part already PASS.)
-  **Note 2026-07-25:** Mariam marked this signed by herself, but she ran the bakeoff — VERIFICATION
-  requires reviewer ≠ producer, and this check is specifically an Arabic-quality read (why the
-  owners table names Maria, a designated Arabic expert). Her read is recorded as a producer
-  self-check; the gate stays open until Maria signs. Not blocking any work in the meantime.
-  **⚠ BLOCKED ON AN ARTIFACT (found 2026-07-26): the 5 Arabic outputs were printed to console only —
-  `check_g0.py` persists nothing but `data/model_limits.json` (aggregate counts).
-  `report/evidence/bakeoff.md` does not exist. Maria cannot review what wasn't saved. ACTION
-  (Mariam): re-run `check_g0.py` capturing per-fixture input → classification → raw output into
-  `report/evidence/bakeoff.md`, then send to Maria. This also closes the Evidence-register row
-  "Model decision", still `[ ]`.**
+- ~~**G0 — Maria**~~ ✅ **CLOSED 2026-07-28 by Mariam's decision** (see gate record; independence limitation recorded, not hidden).
 - ~~G1b — Ghina~~ ✅ **SIGNED by Mariam 2026-07-25** (reviewer ≠ producer; Ali produced). Verified
   live: ministry popups have location + official site + opening hours + portal links but **no phone**;
   the 15 hotlines live in a separate "Useful Numbers" tab. Crawl accurate. **G1b FULLY PASSED.**
