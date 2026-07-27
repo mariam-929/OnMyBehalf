@@ -48,46 +48,46 @@ verification task. If you do open it, VPN off as before.
 
 | # | id | docs | fees | service | KEEP / SKIP |
 |---|---|---|---|---|---|
-| 1 | 11552 | 4 | ✓ | تسجيل زواج | `______` |
-| 2 | 11508 | 4 | ✓ | وثيقة زواج لزوجين لبنانيين | `______` |
-| 3 | 11502 | 4 | ✓ | وثيقة زواج واردة من الخارج لزوج لبناني وزوجة فلسطينية | `______` |
-| 4 | 11504 | 4 | ✓ | وثيقة زواج واردة من الخارج لزوج لبناني وزوجة سورية | `______` |
-| 5 | 11506 | 4 | ✓ | وثيقة زواج واردة من الخارج لزوج لبناني وزوجة قيد الدرس | `______` |
-| 6 | 11512 | 4 | ✓ | وثيقة زواج لزوجة لبنانية وزوج فلسطيني مسجل في | `______` |
-| 7 | 11530 | 4 | ✓ | وثيقة زواج لزوج لبناني وزوجة اجنبية | `______` |
-| 8 | 11510 | 4 | ✓ | وثيقة زواج لزوجة لبنانية وزوج أجنبي من غير الجنسية السورية | `______` |
-| 9 | 11514 | 4 | ✓ | وثيقة زواج لزوجة لبنانية وزوج من الجنسية السورية | `______` |
-| 10 | 11494 | 5 | ✓ | زواج حاصل في بيروت بين رجل أجنبي اومن الجنسية السورية | `______` |
-| 11 | 11546 | 4 | ✓ | تنفيذ وثيقة زواج بعد إبدال دين أو مذهب | `______` |
-| 12 | 11566 | 4 | ✓ | توحيد قيد الزوجين | `______` |
+| 1 | 11552 | 4 | ✓ | تسجيل زواج | `KEEP` |
+| 2 | 11508 | 4 | ✓ | وثيقة زواج لزوجين لبنانيين | `KEEP` |
+| 3 | 11502 | 4 | ✓ | وثيقة زواج واردة من الخارج لزوج لبناني وزوجة فلسطينية | `KEEP` |
+| 4 | 11504 | 4 | ✓ | وثيقة زواج واردة من الخارج لزوج لبناني وزوجة سورية | `KEEP` |
+| 5 | 11506 | 4 | ✓ | وثيقة زواج واردة من الخارج لزوج لبناني وزوجة قيد الدرس | `KEEP` |
+| 6 | 11512 | 4 | ✓ | وثيقة زواج لزوجة لبنانية وزوج فلسطيني مسجل في | `KEEP` |
+| 7 | 11530 | 4 | ✓ | وثيقة زواج لزوج لبناني وزوجة اجنبية | `KEEP` |
+| 8 | 11510 | 4 | ✓ | وثيقة زواج لزوجة لبنانية وزوج أجنبي من غير الجنسية السورية | `KEEP` |
+| 9 | 11514 | 4 | ✓ | وثيقة زواج لزوجة لبنانية وزوج من الجنسية السورية | `KEEP` |
+| 10 | 11494 | 5 | ✓ | زواج حاصل في بيروت بين رجل أجنبي اومن الجنسية السورية | `KEEP` |
+| 11 | 11546 | 4 | ✓ | تنفيذ وثيقة زواج بعد إبدال دين أو مذهب | `KEEP` |
+| 12 | 11566 | 4 | ✓ | توحيد قيد الزوجين | `KEEP` |
 
 **Notes on this group** (anything odd, duplicated, or miscategorised):
-
+item 6 is missing part of the procedure name: المديرية العامة للأحوال الشخصية (دائرة النفوس) في لبنان
 - 
 
 ## 💔 طلاق — Divorce
 
 | # | id | docs | fees | service | KEEP / SKIP |
 |---|---|---|---|---|---|
-| 1 | 11568 | 4 | ✓ | تسجيل طلاق | `______` |
-| 2 | 11532 | 5 | ✓ | إعادة قيد مطلقة *(Ghina checked this in Job B)* | `______` |
-| 3 | 11542 | 4 | ✓ | تنفيذ وثيقة طلاق بعد إبدال دين أو مذهب | `______` |
-| 4 | 11524 | 3 | ✓ | وثيقة طلاق واردة من الخارج (لبنانيان – لبناني وأجنبية او لبنانيه واجنبي) | `______` |
-| 5 | 11556 | 1 | ✓ | إعادة قيد مطلقة إلى قيد والديها | `______` |
-| 6 | 11492 | 6 | ✓ | طلاق حاصل في بيروت بين زوج أجنبي اومن الجنسية السورية أو من الجنسية قيد الدرس و بين زوجة لبنانية أو أجنبية مهما كانت جنسيتها | `______` |
-| 7 | 11474 | 0 ⚠️ | ✓ | مصادقة وثائق أحوال شخصية ( ولادة – وفاة – زواج- طلاق – إخراج قيد عائلي – إخراج قيد فردي- افادة قيد( | `______` |
+| 1 | 11568 | 4 | ✓ | تسجيل طلاق | `KEEP` |
+| 2 | 11532 | 5 | ✓ | إعادة قيد مطلقة *(Ghina checked this in Job B)* | `KEEP` |
+| 3 | 11542 | 4 | ✓ | تنفيذ وثيقة طلاق بعد إبدال دين أو مذهب | `KEEP` |
+| 4 | 11524 | 3 | ✓ | وثيقة طلاق واردة من الخارج (لبنانيان – لبناني وأجنبية او لبنانيه واجنبي) | `KEEP` |
+| 5 | 11556 | 1 | ✓ | إعادة قيد مطلقة إلى قيد والديها | `KEEP` |
+| 6 | 11492 | 6 | ✓ | طلاق حاصل في بيروت بين زوج أجنبي اومن الجنسية السورية أو من الجنسية قيد الدرس و بين زوجة لبنانية أو أجنبية مهما كانت جنسيتها | `KEEP` |
+| 7 | 11474 | 0 ⚠️ | ✓ | مصادقة وثائق أحوال شخصية ( ولادة – وفاة – زواج- طلاق – إخراج قيد عائلي – إخراج قيد فردي- افادة قيد( | `SKIP` |
 
 **Notes on this group** (anything odd, duplicated, or miscategorised):
 
-- 
+-No Notes 
 
 ## 📋 بيان قيد وسجلات — Civil extracts & registers
 
 | # | id | docs | fees | service | KEEP / SKIP |
 |---|---|---|---|---|---|
-| 1 | 11548 | 2 | ✓ | بيان قيد عائلي وإفرادي | `______` |
-| 2 | 11538 | 3 | ✓ | تنفيذ قرار قضائي بتصحيح قيود (في السجلات) | `______` |
-| 3 | 11470 | 1 | ✓ | طلب بيان قيد عن سجلات إحصاء ما قبل 1932 | `______` |
+| 1 | 11548 | 2 | ✓ | بيان قيد عائلي وإفرادي | `KEEP` |
+| 2 | 11538 | 3 | ✓ | تنفيذ قرار قضائي بتصحيح قيود (في السجلات) | `KEEP` |
+| 3 | 11470 | 1 | ✓ | طلب بيان قيد عن سجلات إحصاء ما قبل 1932 | `KEEP` |
 
 **Notes on this group** (anything odd, duplicated, or miscategorised):
 
@@ -97,15 +97,15 @@ verification task. If you do open it, VPN off as before.
 
 | # | id | docs | fees | service | KEEP / SKIP |
 |---|---|---|---|---|---|
-| 1 | 11484 | 4 | ✓ | إلغاء مراسيم الترخيص | `______` |
-| 2 | 11562 | 4 | ✓ | تنفيذ المراسيم | `______` |
-| 3 | 11480 | 2 | — | الاعتراض مع وقف التنفيذ على القرارات الرجائية | `______` |
-| 4 | 11486 | 2 | — | استحضارات الدعاوى | `______` |
-| 5 | 11564 | 2 | ✓ | تنفيذ الأحكام بعد صدورها | `______` |
+| 1 | 11484 | 4 | ✓ | إلغاء مراسيم الترخيص | `SKIP` |
+| 2 | 11562 | 4 | ✓ | تنفيذ المراسيم | `SKIP` |
+| 3 | 11480 | 2 | — | الاعتراض مع وقف التنفيذ على القرارات الرجائية | `SKIP` |
+| 4 | 11486 | 2 | — | استحضارات الدعاوى | `SKIP` |
+| 5 | 11564 | 2 | ✓ | تنفيذ الأحكام بعد صدورها | `SKIP` |
 
 **Notes on this group** (anything odd, duplicated, or miscategorised):
 
-- 
+- This group is SKIP because these are used by specilized professionals, mostly lawyers, not regular citizens.
 
 ---
 
@@ -124,27 +124,27 @@ Suggested topics from your clusters (change freely): تسجيل زواج · تس
 
 ### Question 1
 
-- **Arabic:** 
-- **English:** 
-- **Which service should answer it (id or name):** 
+- **Arabic:** كيف يمكنني تسجيل زواجي في لبنان؟
+- **English:** How do i register my marriage in Lebanon?
+- **Which service should answer it (id or name):** 11552
 
 ### Question 2
 
-- **Arabic:** 
-- **English:** 
-- **Which service should answer it (id or name):** 
+- **Arabic:** أين يمكنني الحصول على بيان قيد عائلي؟
+- **English:** Where can i go to obtain a family civil registry? 
+- **Which service should answer it (id or name):** 11548
 
 ### Question 3
 
-- **Arabic:** 
-- **English:** 
-- **Which service should answer it (id or name):** 
+- **Arabic:** كيف فيي أعمل وثيقة زاوج بعد ما غيرت ديني؟
+- **English:** How can i register my marriage after changing my religion?
+- **Which service should answer it (id or name):** 11546
 
 ### Question 4  ← make this one the messy/badly-phrased one
 
-- **Arabic:** 
-- **English:** 
-- **Which service should answer it (id or name):** 
+- **Arabic:** زواج من الخارج الأوراق؟
+- **English:** marriage from abroad docs?
+- **Which service should answer it (id or name):** 11530
 
 ---
 
@@ -152,13 +152,13 @@ Suggested topics from your clusters (change freely): تسجيل زواج · تس
 
 While going through the list, flag anything suspicious:
 
-- **Services that look like duplicates of each other:**
+- **Services that look like duplicates of each other:** NO
   - 
-- **Titles that are garbled, cut off, or don't make sense:**
+- **Titles that are garbled, cut off, or don't make sense:** item 6 within MArriage is missing part of the procedure name: المديرية العامة للأحوال الشخصية (دائرة النفوس) في لبنان
+
+- **Procedures you know exist but are missing from the list entirely:** None
   - 
-- **Procedures you know exist but are missing from the list entirely:**
-  - 
-- **Anything else:**
+- **Anything else:** None
   - 
 
 ---
@@ -169,6 +169,6 @@ While going through the list, flag anything suspicious:
 2. **Swap with Maria** and glance at her KEEP/SKIP calls — same rule as last time, neither
    of us approves our own work. You don't need to re-judge everything; just flag anything you'd
    have decided differently.
-
+None noted, all exceptions, justifications and observations detailed in the file.
 **Why this one is urgent:** the system's testing and scoring are both blocked until this list
 exists. It's the last thing standing between the data work and the finished project.

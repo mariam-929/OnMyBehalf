@@ -51,9 +51,9 @@ key in `.env`, gitignored & validated). Run anything with
 - **Dawlati Cloudflare 403s VPN IPs** — if any Dawlati call 403s, check the VPN first (see Findings).
 
 **NEXT ACTIONS (updated 2026-07-27 — G2 and G5 both passed today):**
-1. **G3 (CRITICAL PATH, blocked on Ghina):** her 27 Job-C rows are the only thing standing between
-   us and `curated_core.json` → `core_verification.csv` → `document_sources.json` →
-   `gold_claims.json` → `check_g3.py` (which does not exist yet either). Maria's half is done.
+1. ~~G3 blocked on Ghina~~ **GHINA'S 27 ROWS LANDED 2026-07-28.** `curated_core.json` = **44
+   services**; `gold_claims.json` = 8 expert-written cases. Remaining for a full G3:
+   `document_sources.json` (≥20 rows source-checked) + `check_g3.py`.
 2. **G4 BUILT 2026-07-28** — indexer + hybrid retrieval + calibration + check_g4 all done.
    3/4 auto criteria pass. The single failure is a DISPUTED GOLD LABEL, not a system defect:
    «بيان قيد» is labelled `clarify` but the system returns `found -> #11548 بيان قيد عائلي
@@ -83,7 +83,7 @@ _(historical planning log below — CURRENT STATE above supersedes it for "where
 | G1 | Service catalog (249 posts) | ✅ PASS | 2026-07-25 | data/catalog.json — 249 (195/24/30), 0 dup ids, all modified_gmt; `check_g1.py` 7/7; report/evidence/coverage.md | **Mariam 2026-07-25** (5 URLs load, titles match) |
 | G1b | Contact catalog (/en/directory crawl) | ✅ PASS | 2026-07-25 | 126 ContactRecords, all valid; coverage 100%/95%; contacts_coverage.md | **Mariam 2026-07-25** (verified live: ministries have location+site+hours+portals, no phone; 15 hotlines in Useful Numbers tab). 2 enhancement findings logged |
 | G2 | Corpus quality (REFRAMED: ajax, not crawl) | ✅ **PASS** | 2026-07-27 | 193 records, 180 complete; **recall 90% (36/40), precision 81%**; check_g2.py 5/5 | **Maria + Ghina 2026-07-27** — 8 services verified, cross-reviewed both directions (reviewer≠producer holds each way). Worksheets in report/evidence/ |
-| G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
+| G3 | Reference data verified (**core-44**, not 40) | ⚠️ **PARTIAL** | 2026-07-28 | `data/curated_core.json` **44 services** (Maria 23 + Ghina 21, each in her own clusters; 9 skipped w/ reasons); `tests/gold_claims.json` **8 claim-level cases**, all written BY the experts. Still missing: `core_verification.csv`, `document_sources.json` (≥20 source-checked rows), `check_g3.py` | Selections ARE the human check (reviewer≠producer holds: each judged her own cluster, neither approved her own). Lookup-table rows still need source-checking |
 | G4 | Retrieval calibrated (top-1 + abstention) | ⚠️ **2/4 AUTO** | 2026-07-28 | holdout top-1 **88% (7/8, CI 53-98%)**, abstain **1/3**, clarify 1/1, 1.26s/query; theta_abs=0.55 cosine, dev-only calibration; report/evidence/retrieval.md | **PENDING: Maria/Ghina** — inspect misses + verdict. Reviewer: __ |
 | G5 | Graph skeleton (BUILD track, fixtures) | ✅ **AUTO PASS** | 2026-07-27 | `check_g5.py` 9/9: compiles (14 nodes); all 5 terminal actions schema-valid w/ traces; 64 unit tests green | **n/a — no human check** |
 | G6 | Agent end-to-end (gold + 2 ext calls) | ✅ **AUTO PASS** | 2026-07-28 | `check_g6.py` 8/8 — live index + live REST; both external calls in trace; 4/5 docs resolved; adversarial refused; out-of-scope abstains; report/evidence/trace_normal.json | **PENDING: Maria/Ghina** read the Arabic answer for fluency. Reviewer: __ |

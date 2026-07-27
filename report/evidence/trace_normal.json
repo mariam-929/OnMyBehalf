@@ -1,10 +1,10 @@
 {
   "query": "شو المستندات المطلوبة لإعادة قيد مطلقة؟",
-  "elapsed_s": 31.92,
+  "elapsed_s": 29.13,
   "envelope": {
     "action": "answer",
     "reasoning": "Matched the query to a Dawlati service and assembled its published requirements.",
-    "confidence": 0.4,
+    "confidence": 0.8,
     "language": "ar",
     "needs_human_review": true,
     "review_reasons": [
@@ -25,7 +25,7 @@
           "status": "unchanged",
           "source_modified_gmt": "2026-07-13T14:10:39",
           "snapshot_modified_gmt": "2026-07-13T14:10:39",
-          "checked_at": "2026-07-27T21:28:27.280473+00:00",
+          "checked_at": "2026-07-27T22:01:54.329550+00:00",
           "note": "unchanged since snapshot 2026-07-13T14:10:39; change-detection only, substantive currency not guaranteed"
         },
         "record_status": "complete"
@@ -116,40 +116,40 @@
   "trace_events": [
     {
       "node": "detect_language",
-      "at": "2026-07-27T21:28:25.991456+00:00",
+      "at": "2026-07-27T22:01:53.166389+00:00",
       "arabic_chars": 33,
       "latin_chars": 0,
       "decided": "ar"
     },
     {
       "node": "validate_input",
-      "at": "2026-07-27T21:28:25.992592+00:00",
+      "at": "2026-07-27T22:01:53.167388+00:00",
       "ok": true
     },
     {
       "node": "classify_intent",
-      "at": "2026-07-27T21:28:26.824878+00:00",
+      "at": "2026-07-27T22:01:53.920452+00:00",
       "intent": "service_query",
       "mode": "model",
-      "latency_s": 0.832
+      "latency_s": 0.753
     },
     {
       "node": "retrieve",
-      "at": "2026-07-27T21:28:26.986129+00:00",
+      "at": "2026-07-27T22:01:54.056321+00:00",
       "mode": "live",
       "n": 5,
       "outcome": "found",
       "top_cos": 1.0,
       "cos_gap": 0.3305,
-      "top_rrf": 0.06347,
-      "rrf_margin": 0.01508,
-      "theta_abs": 0.55,
+      "top_rrf": 0.07986,
+      "rrf_margin": 0.01534,
+      "theta_abs": 0.45,
       "theta_amb": 0.0,
       "calibrated": true
     },
     {
       "node": "research",
-      "at": "2026-07-27T21:28:30.965340+00:00",
+      "at": "2026-07-27T22:01:58.153338+00:00",
       "mode": "live",
       "n_documents": 5,
       "tool_calls": 7,
@@ -189,10 +189,10 @@
     },
     {
       "node": "compose",
-      "at": "2026-07-27T21:28:30.966340+00:00",
-      "confidence": 0.4,
+      "at": "2026-07-27T22:01:58.154341+00:00",
+      "confidence": 0.8,
       "confidence_reasons": [
-        "base=non_core",
+        "base=core",
         "unresolved_document"
       ],
       "conditional_flags": [],
@@ -200,12 +200,12 @@
     },
     {
       "node": "validate_schema",
-      "at": "2026-07-27T21:28:30.967339+00:00",
+      "at": "2026-07-27T22:01:58.154341+00:00",
       "ok": true
     },
     {
       "node": "respond",
-      "at": "2026-07-27T21:28:30.968338+00:00",
+      "at": "2026-07-27T22:01:58.155587+00:00",
       "action": "answer"
     }
   ]

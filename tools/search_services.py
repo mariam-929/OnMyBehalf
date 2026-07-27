@@ -16,7 +16,8 @@ import re
 from pathlib import Path
 
 from agents.models import RetrievedCandidate
-from tools.indexer import CHROMA_DIR, COLLECTION, clean_title, get_model, load_corpus
+from tools.indexer import (CHROMA_DIR, COLLECTION, clean_title, get_model, load_corpus,
+                           load_curated_core)
 from tools.rrf import rrf_fuse
 from tools.text_norm import normalize_ar
 
@@ -56,21 +57,31 @@ def strip_boilerplate(query: str) -> str:
     return stripped if stripped and stripped != q.strip() else ""
 
 
-def _tokens(text: str) -> list[str]:
-    """Normalise, then strip the Arabic definite article «ال» from each token (light stemming).
+# Possessive / attached pronoun suffixes. «تسجيل زواجي» ("registering MY marriage") must match
+# the title «تسجيل زواج» — measured: without this, Ghina's own demo question
+# «كيف يمكنني تسجيل زواجي في لبنان؟» retrieved the wrong marriage service.
+_SUFFIXES = ("هما", "كما", "هم", "هن", "كم", "كن", "نا", "ها", "ي", "ه", "ك")
 
-    Without this, «بطاقة الهوية» in a query does not match «بطاقة هوية» in the title, because
-    «الهويه» and «هويه» are different BM25 terms. Measured: stripping the article moved the
-    flagship ID-card query from a MISS to a top-1 hit. Tokens of 3 characters or fewer are left
-    alone — «ال» is most of a short word, and stripping it there destroys the term (e.g. «الام»).
+
+def _stem(token: str) -> str:
+    """Light Arabic stemming: strip the definite article and one attached pronoun suffix.
+
+    Length guards are load-bearing in both directions — «ال» is most of a short word and
+    stripping it destroys the term (الام), and a 1-char suffix off a 3-char token leaves noise.
+    This is deliberately shallow: a real stemmer would also strip verb prefixes, which would
+    collide «تسجيل» with unrelated forms across a corpus this small.
     """
-    out: list[str] = []
-    for t in normalize_ar(text).split():
-        if len(t) > 3 and t.startswith("ال"):
-            t = t[2:]
-        if t:
-            out.append(t)
-    return out
+    if len(token) > 3 and token.startswith("ال"):
+        token = token[2:]
+    for suf in _SUFFIXES:
+        if len(token) - len(suf) >= 3 and token.endswith(suf):
+            return token[: -len(suf)]
+    return token
+
+
+def _tokens(text: str) -> list[str]:
+    """Normalise, then light-stem each token for BM25 matching."""
+    return [s for t in normalize_ar(text).split() if (s := _stem(t))]
 
 
 def _load_bm25() -> None:
@@ -144,15 +155,26 @@ def search_services(query: str, k: int = 5) -> list[RetrievedCandidate]:
     dn, cos = dense_ranked(query, k * 2)
     channels = [bm, dn]
 
-    core = strip_boilerplate(query)
-    if core:
-        bm_c = bm25_ranked(core, k * 2)
-        dn_c, cos_c = dense_ranked(core, k * 2)
+    stripped = strip_boilerplate(query)
+    if stripped:
+        bm_c = bm25_ranked(stripped, k * 2)
+        dn_c, cos_c = dense_ranked(stripped, k * 2)
         channels += [bm_c, dn_c]
         # report the BEST cosine seen for a service across both phrasings — the stripped form is
         # the one that actually resembles the indexed title, so it is usually the honest score
         for pid, c in cos_c.items():
             cos[pid] = max(cos.get(pid, 0.0), c)
+
+    # CORE BOOST as an extra RRF channel, not a filter. The 44 core services were each judged
+    # KEEP by a domain expert working her own procedure cluster, so "a human vouched for this
+    # service" is real evidence and belongs in the ranking. It was being stored as metadata and
+    # then ignored: Ghina's own question «أين يمكنني الحصول على بيان قيد عائلي؟» lost to #11474,
+    # a service SHE had explicitly marked SKIP for having zero documents.
+    # A channel rather than a filter because non-core services must stay reachable — 149 of 193
+    # are non-core and a citizen may legitimately ask about one.
+    core = load_curated_core()
+    if core:
+        channels.append([pid for pid, _ in rrf_fuse(*channels) if pid in core])
 
     fused = rrf_fuse(*channels)[:k]
     bm_rank = {pid: i + 1 for i, pid in enumerate(bm)}
