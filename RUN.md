@@ -111,7 +111,7 @@ Open **Raw JSON** for the structured output.
 If Groq is down or the venue's network blocks Dawlati:
 
 ```powershell
-streamlit run app/streamlit_app.py -- --offline
+& "$env:USERPROFILE\venvs\OnMyBehalf\Scripts\python.exe" -m streamlit run app/streamlit_app.py -- --offline
 ```
 
 Note the `--` before `--offline`; that is how Streamlit passes arguments to the script. A red
@@ -131,7 +131,7 @@ and citations still work — only the live source check is disabled.
 | **"localhost refused to connect"** | **no server is running** — the launch command failed | scroll up in the terminal for the real error; use the `python.exe -m streamlit` form in Step 5 |
 | `streamlit: command not found` / `not recognized` | venv not activated, and `streamlit` is not on the system PATH | use the `python.exe -m streamlit` form in Step 5 |
 | Page was working, now dead | terminal was closed or `Ctrl+C` pressed | relaunch; keep the terminal open |
-| Port 8501 already in use | an old instance is running | `streamlit run app/streamlit_app.py --server.port 8502` |
+| Port 8501 already in use | an old instance is still running | add `--server.port 8502` to the launch command, or close the old terminal |
 | Answers look right but confidence is low | usually correct — freshness or an unresolved document | open the trace; the deductions are listed |
 
 ---
@@ -140,9 +140,11 @@ and citations still work — only the live source check is disabled.
 
 ```powershell
 cd "C:\Users\Mariam\OneDrive - American University of Beirut\Documents\summer 2026\nlp\OnMyBehalf"
-& "$env:USERPROFILE\venvs\OnMyBehalf\Scripts\Activate.ps1"
-streamlit run app/streamlit_app.py
+& "$env:USERPROFILE\venvs\OnMyBehalf\Scripts\python.exe" -m streamlit run app/streamlit_app.py
 ```
+
+Wait for the **"You can now view your Streamlit app"** banner, then open
+<http://localhost:8501>. Leave the terminal open.
 
 Then, before the audience is watching:
 
