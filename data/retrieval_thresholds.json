@@ -1,0 +1,12 @@
+{
+  "theta_abs": 0.55,
+  "theta_amb": 0.0,
+  "calibrated_on": "dev",
+  "dev_n": 7,
+  "holdout_n": 12,
+  "holdout_top1": 1.0,
+  "holdout_top1_ci": [
+    0.6756,
+    1.0
+  ]
+}

@@ -54,9 +54,12 @@ key in `.env`, gitignored & validated). Run anything with
 1. **G3 (CRITICAL PATH, blocked on Ghina):** her 27 Job-C rows are the only thing standing between
    us and `curated_core.json` → `core_verification.csv` → `document_sources.json` →
    `gold_claims.json` → `check_g3.py` (which does not exist yet either). Maria's half is done.
-2. **G4 (blocked on Ali):** `tools/indexer.py` + `search_services.py` are still
-   `NotImplementedError` stubs. The corpus exists so the build is unblocked; only θ calibration
-   needs G3. **RRF already landed and is unit-tested** (`tools/rrf.py`) — it came free with G5.
+2. **G4 BUILT 2026-07-28** — indexer + hybrid retrieval + calibration + check_g4 all done.
+   3/4 auto criteria pass. The single failure is a DISPUTED GOLD LABEL, not a system defect:
+   «بيان قيد» is labelled `clarify` but the system returns `found -> #11548 بيان قيد عائلي
+   وإفرادي`, which may well be right (that service covers both family and individual extracts;
+   #11470 is a niche pre-1932 variant). **Left failing on purpose — relabelling to pass would be
+   tuning to the metric. Needs Maria/Ghina's verdict.**
 3. **G6** needs both of the above; nothing else blocks it.
 4. **G9 UI shell (Gaby)** — codes against `models.py` + a fixture Envelope; does NOT need the
    agent. Hard checkpoint: if it doesn't exist by Jul 28 morning, Mariam builds it and cuts
@@ -81,7 +84,7 @@ _(historical planning log below — CURRENT STATE above supersedes it for "where
 | G1b | Contact catalog (/en/directory crawl) | ✅ PASS | 2026-07-25 | 126 ContactRecords, all valid; coverage 100%/95%; contacts_coverage.md | **Mariam 2026-07-25** (verified live: ministries have location+site+hours+portals, no phone; 15 hotlines in Useful Numbers tab). 2 enhancement findings logged |
 | G2 | Corpus quality (REFRAMED: ajax, not crawl) | ✅ **PASS** | 2026-07-27 | 193 records, 180 complete; **recall 90% (36/40), precision 81%**; check_g2.py 5/5 | **Maria + Ghina 2026-07-27** — 8 services verified, cross-reviewed both directions (reviewer≠producer holds each way). Worksheets in report/evidence/ |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
-| G4 | Retrieval calibrated (top-1 + abstention) | NOT RUN | — | — | — |
+| G4 | Retrieval calibrated (top-1 + abstention) | ⚠️ **3/4 AUTO** | 2026-07-28 | holdout top-1 **100% (8/8, CI 68-100%)**, abstain 2/2, clarify **1/2**, 1.35s/query; theta_abs=0.55 cosine calibrated on dev-only; report/evidence/retrieval.md | **PENDING: Maria/Ghina** — one gold LABEL is disputed, not a system bug (see below). Reviewer: __ |
 | G5 | Graph skeleton (BUILD track, fixtures) | ✅ **AUTO PASS** | 2026-07-27 | `check_g5.py` 9/9: compiles (14 nodes); all 5 terminal actions schema-valid w/ traces; 64 unit tests green | **n/a — no human check** |
 | G6 | Agent end-to-end (gold + 2 ext calls) | NOT RUN | — | — | — |
 | G7 | Freshness & HITL | NOT RUN | — | — | — |
