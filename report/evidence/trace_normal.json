@@ -1,0 +1,212 @@
+{
+  "query": "شو المستندات المطلوبة لإعادة قيد مطلقة؟",
+  "elapsed_s": 31.92,
+  "envelope": {
+    "action": "answer",
+    "reasoning": "Matched the query to a Dawlati service and assembled its published requirements.",
+    "confidence": 0.4,
+    "language": "ar",
+    "needs_human_review": true,
+    "review_reasons": [
+      "unresolved_document"
+    ],
+    "output": {
+      "service": {
+        "name_ar": "إعادة قيد مطلقة",
+        "name_en": null,
+        "name_en_gloss": null,
+        "source_url": "https://dawlati.gov.lb/ministry_service_ser/%d8%a5%d8%b9%d8%a7%d8%af%d8%a9-%d9%82%d9%8a%d8%af-%d9%85%d8%b7%d9%84%d9%82%d8%a9/",
+        "authority": "Interior and Municipalities",
+        "fees": "طوابع أميرية بقيمة 100000ل.ل على الطلب",
+        "stated_processing": null,
+        "where_to_apply": "المديرية العامة للأحوال الشخصية (أقلام النفوس)",
+        "contacts": [],
+        "freshness": {
+          "status": "unchanged",
+          "source_modified_gmt": "2026-07-13T14:10:39",
+          "snapshot_modified_gmt": "2026-07-13T14:10:39",
+          "checked_at": "2026-07-27T21:28:27.280473+00:00",
+          "note": "unchanged since snapshot 2026-07-13T14:10:39; change-detection only, substantive currency not guaranteed"
+        },
+        "record_status": "complete"
+      },
+      "required_documents": [
+        {
+          "name_ar": "طلب مقدم من المطلقة مصدق من المختار",
+          "name_en": null,
+          "name_en_gloss": null,
+          "resolution": "unresolved",
+          "match_score": 0.5258,
+          "where_to_obtain": null,
+          "fees": null,
+          "duration": null,
+          "source_url": null,
+          "verified_on": null,
+          "freshness": null,
+          "needs_human_review": true
+        },
+        {
+          "name_ar": "بيان قيد عائلي للمطلقين",
+          "name_en": null,
+          "name_en_gloss": null,
+          "resolution": "corpus",
+          "match_score": 0.7768,
+          "where_to_obtain": "المديرية العامة للأحوال الشخصية – دوائر النفوس أو أقلام النفوس",
+          "fees": "طابع أميري بقيمة 100000\nطابع أميري بقيمة400000ل.ل",
+          "duration": null,
+          "source_url": "https://dawlati.gov.lb/ministry_service_ser/%d8%a8%d9%8a%d8%a7%d9%86-%d9%82%d9%8a%d8%af-%d8%b9%d8%a7%d8%a6%d9%84%d9%8a-%d9%88%d8%a5%d9%81%d8%b1%d8%a7%d8%af%d9%8a/",
+          "verified_on": null,
+          "freshness": null,
+          "needs_human_review": false
+        },
+        {
+          "name_ar": "بيان قيد عائلي لوالدي المطلقة",
+          "name_en": null,
+          "name_en_gloss": null,
+          "resolution": "corpus",
+          "match_score": 0.6964,
+          "where_to_obtain": "المديرية العامة للأحوال الشخصية – دوائر النفوس أو أقلام النفوس",
+          "fees": "طابع أميري بقيمة 100000\nطابع أميري بقيمة400000ل.ل",
+          "duration": null,
+          "source_url": "https://dawlati.gov.lb/ministry_service_ser/%d8%a8%d9%8a%d8%a7%d9%86-%d9%82%d9%8a%d8%af-%d8%b9%d8%a7%d8%a6%d9%84%d9%8a-%d9%88%d8%a5%d9%81%d8%b1%d8%a7%d8%af%d9%8a/",
+          "verified_on": null,
+          "freshness": null,
+          "needs_human_review": false
+        },
+        {
+          "name_ar": "صورة طبق الأصل عن وثيقة زواج المطلقين",
+          "name_en": null,
+          "name_en_gloss": null,
+          "resolution": "corpus",
+          "match_score": 0.6986,
+          "where_to_obtain": "المديرية العامة للأحوال الشخصية – دائرة المغتربين",
+          "fees": "لا رسوم",
+          "duration": null,
+          "source_url": "https://dawlati.gov.lb/ministry_service_ser/%d9%88%d8%ab%d9%8a%d9%82%d8%a9-%d8%b2%d9%88%d8%a7%d8%ac-%d9%84%d8%b2%d9%88%d8%ac%d9%8a%d9%86-%d9%84%d8%a8%d9%86%d8%a7%d9%86%d9%8a%d9%8a%d9%86/",
+          "verified_on": null,
+          "freshness": null,
+          "needs_human_review": false
+        },
+        {
+          "name_ar": "صورة طبق الأصل عن وثيقة الطلاق",
+          "name_en": null,
+          "name_en_gloss": null,
+          "resolution": "corpus",
+          "match_score": 0.6496,
+          "where_to_obtain": "المديرية العامة للأحوال الشخصية – دوائر وأقلام النفوس",
+          "fees": "طابع مالي بقيمة 400000ل.ل على الوثيقه طابع مالي بقيمة 50000 ل.ل عن كل صورة طبق الاصل",
+          "duration": null,
+          "source_url": "https://dawlati.gov.lb/ministry_service_ser/%d8%aa%d8%b3%d8%ac%d9%8a%d9%84-%d8%b7%d9%84%d8%a7%d9%82/",
+          "verified_on": null,
+          "freshness": null,
+          "needs_human_review": false
+        }
+      ],
+      "time_estimate": {
+        "computable": false,
+        "total_min_days": null,
+        "total_max_days": null,
+        "is_lower_bound": false,
+        "breakdown": []
+      },
+      "caveats": [],
+      "conditional_flags": []
+    }
+  },
+  "trace_events": [
+    {
+      "node": "detect_language",
+      "at": "2026-07-27T21:28:25.991456+00:00",
+      "arabic_chars": 33,
+      "latin_chars": 0,
+      "decided": "ar"
+    },
+    {
+      "node": "validate_input",
+      "at": "2026-07-27T21:28:25.992592+00:00",
+      "ok": true
+    },
+    {
+      "node": "classify_intent",
+      "at": "2026-07-27T21:28:26.824878+00:00",
+      "intent": "service_query",
+      "mode": "model",
+      "latency_s": 0.832
+    },
+    {
+      "node": "retrieve",
+      "at": "2026-07-27T21:28:26.986129+00:00",
+      "mode": "live",
+      "n": 5,
+      "outcome": "found",
+      "top_cos": 1.0,
+      "cos_gap": 0.3305,
+      "top_rrf": 0.06347,
+      "rrf_margin": 0.01508,
+      "theta_abs": 0.55,
+      "theta_amb": 0.0,
+      "calibrated": true
+    },
+    {
+      "node": "research",
+      "at": "2026-07-27T21:28:30.965340+00:00",
+      "mode": "live",
+      "n_documents": 5,
+      "tool_calls": 7,
+      "calls": [
+        {
+          "tool": "resolve_document",
+          "arg": "طلب مقدم من المطلقة مصدق من المختار"
+        },
+        {
+          "tool": "resolve_document",
+          "arg": "بيان قيد عائلي للمطلقين"
+        },
+        {
+          "tool": "resolve_document",
+          "arg": "بيان قيد عائلي لوالدي المطلقة"
+        },
+        {
+          "tool": "resolve_document",
+          "arg": "صورة طبق الأصل عن وثيقة زواج المطلقين"
+        },
+        {
+          "tool": "resolve_document",
+          "arg": "صورة طبق الأصل عن وثيقة الطلاق"
+        },
+        {
+          "tool": "check_freshness",
+          "arg": 11532,
+          "result": "unchanged"
+        },
+        {
+          "tool": "live_service_lookup",
+          "arg": "شو المستندات المطلوبة لإعادة قيد مطلقة؟",
+          "result": "exists=False"
+        }
+      ],
+      "per_doc_freshness_degraded": true
+    },
+    {
+      "node": "compose",
+      "at": "2026-07-27T21:28:30.966340+00:00",
+      "confidence": 0.4,
+      "confidence_reasons": [
+        "base=non_core",
+        "unresolved_document"
+      ],
+      "conditional_flags": [],
+      "needs_human_review": true
+    },
+    {
+      "node": "validate_schema",
+      "at": "2026-07-27T21:28:30.967339+00:00",
+      "ok": true
+    },
+    {
+      "node": "respond",
+      "at": "2026-07-27T21:28:30.968338+00:00",
+      "action": "answer"
+    }
+  ]
+}

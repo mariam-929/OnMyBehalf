@@ -18,6 +18,18 @@ MAX_MODEL_TOOL_CALLS = 6   # N3 cap
 DEGRADE_ABOVE_DOCS = 4     # >4 documents => skip per-doc freshness, check the service only
 
 
+def _as_dict(result) -> dict:
+    """Tools may return a Pydantic model or an already-dumped dict; normalise to dict.
+
+    The trace is what the demo shows on screen, so a `getattr` against a dict silently rendering
+    `None` is a visible defect, not just an internal one — it made two working external calls
+    look like failures.
+    """
+    if isinstance(result, dict):
+        return result
+    return result.model_dump() if hasattr(result, "model_dump") else {}
+
+
 def research(state: dict, tools: dict | None = None) -> dict:
     """Execute the (single) research pass.
 
@@ -50,19 +62,20 @@ def research(state: dict, tools: dict | None = None) -> dict:
     degraded = len(doc_names) > DEGRADE_ABOVE_DOCS
     check = tools.get("check_freshness")
     if check and record.get("post_id") is not None:
-        fresh = check(record["post_id"])
+        fresh = _as_dict(check(record["post_id"]))
         calls.append({"tool": "check_freshness", "arg": record["post_id"],
-                      "result": getattr(fresh, "status", None) or fresh.get("status")})
-        state = {**state, "service_freshness": fresh if isinstance(fresh, dict)
-                 else fresh.model_dump()}
+                      "result": fresh.get("status")})
+        state = {**state, "service_freshness": fresh}
 
     # --- live lookup: the 2nd external call --------------------------------
     lookup = tools.get("live_service_lookup")
     if lookup:
-        res = lookup(state.get("query", ""))
+        res = _as_dict(lookup(state.get("query", "")))
         calls.append({"tool": "live_service_lookup", "arg": state.get("query", "")[:60],
-                      "result": getattr(res, "exists", None)})
-        state = {**state, "live_lookup": res if isinstance(res, dict) else res.model_dump()}
+                      "result": f"exists={res.get('exists')}"
+                                + (f" newest=#{res['newest_post_id']}"
+                                   if res.get("newest_post_id") else "")})
+        state = {**state, "live_lookup": res}
 
     return with_trace(
         state, "research",

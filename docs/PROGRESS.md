@@ -84,9 +84,9 @@ _(historical planning log below — CURRENT STATE above supersedes it for "where
 | G1b | Contact catalog (/en/directory crawl) | ✅ PASS | 2026-07-25 | 126 ContactRecords, all valid; coverage 100%/95%; contacts_coverage.md | **Mariam 2026-07-25** (verified live: ministries have location+site+hours+portals, no phone; 15 hotlines in Useful Numbers tab). 2 enhancement findings logged |
 | G2 | Corpus quality (REFRAMED: ajax, not crawl) | ✅ **PASS** | 2026-07-27 | 193 records, 180 complete; **recall 90% (36/40), precision 81%**; check_g2.py 5/5 | **Maria + Ghina 2026-07-27** — 8 services verified, cross-reviewed both directions (reviewer≠producer holds each way). Worksheets in report/evidence/ |
 | G3 | Reference data verified (40-row sheet) | NOT RUN | — | — | — |
-| G4 | Retrieval calibrated (top-1 + abstention) | ⚠️ **3/4 AUTO** | 2026-07-28 | holdout top-1 **100% (8/8, CI 68-100%)**, abstain 2/2, clarify **1/2**, 1.35s/query; theta_abs=0.55 cosine calibrated on dev-only; report/evidence/retrieval.md | **PENDING: Maria/Ghina** — one gold LABEL is disputed, not a system bug (see below). Reviewer: __ |
+| G4 | Retrieval calibrated (top-1 + abstention) | ⚠️ **2/4 AUTO** | 2026-07-28 | holdout top-1 **88% (7/8, CI 53-98%)**, abstain **1/3**, clarify 1/1, 1.26s/query; theta_abs=0.55 cosine, dev-only calibration; report/evidence/retrieval.md | **PENDING: Maria/Ghina** — inspect misses + verdict. Reviewer: __ |
 | G5 | Graph skeleton (BUILD track, fixtures) | ✅ **AUTO PASS** | 2026-07-27 | `check_g5.py` 9/9: compiles (14 nodes); all 5 terminal actions schema-valid w/ traces; 64 unit tests green | **n/a — no human check** |
-| G6 | Agent end-to-end (gold + 2 ext calls) | NOT RUN | — | — | — |
+| G6 | Agent end-to-end (gold + 2 ext calls) | ✅ **AUTO PASS** | 2026-07-28 | `check_g6.py` 8/8 — live index + live REST; both external calls in trace; 4/5 docs resolved; adversarial refused; out-of-scope abstains; report/evidence/trace_normal.json | **PENDING: Maria/Ghina** read the Arabic answer for fluency. Reviewer: __ |
 | G7 | Freshness & HITL | NOT RUN | — | — | — |
 | G8 | Eval (claim-level gold, 24-answer audit) | NOT RUN | — | — | — |
 | G9 | UI demo-ready (RTL + offline) | NOT RUN | — | — | — |

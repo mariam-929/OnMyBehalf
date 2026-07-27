@@ -28,7 +28,7 @@ try:
 except Exception:  # noqa: BLE001
     pass
 
-from tools.rrf import margin  # noqa: E402
+from agents.nodes.retrieve import classify_outcome  # noqa: E402
 from tools.search_services import search_services  # noqa: E402
 
 GOLD = ROOT / "tests" / "retrieval_gold.json"
@@ -37,23 +37,17 @@ TARGET_TOP1 = 0.90
 MAX_EMBED_S = 2.0
 
 
-def outcome(cands, theta_abs: float, theta_amb: float) -> str:
-    """Rank with RRF; ABSTAIN on cosine.
+_OUTCOME_TO_GOLD = {"not_found": "abstain", "ambiguous": "clarify", "found": "found"}
 
-    RRF cannot drive abstention and this was measured, not assumed: its score depends only on
-    RANK, so the top item scores ~1/(60+1)+1/(60+1) whether the match is perfect or nonsense.
-    Every query in the gold set scored 0.0164-0.0328 at rank 1 regardless of correctness, so no
-    RRF threshold separates in-scope from out-of-scope. Dense cosine is a genuine QUALITY signal,
-    so the two thresholds read it instead.
+
+def outcome(cands, theta_abs: float, theta_amb: float) -> str:
+    """Delegate to the SAME function the live retrieve node uses, then map to gold vocabulary.
+
+    Not duplicated on purpose. These two diverged once — the gate scored on cosine while the node
+    still thresholded on rrf_score — so the gate reported PASS while the live agent abstained on
+    a valid demo query. A gate that measures different logic from the runtime measures nothing.
     """
-    if not cands:
-        return "abstain"
-    if cands[0].dense_cos < theta_abs:
-        return "abstain"
-    gap = cands[0].dense_cos - (cands[1].dense_cos if len(cands) > 1 else 0.0)
-    if gap < theta_amb:
-        return "clarify"
-    return "found"
+    return _OUTCOME_TO_GOLD[classify_outcome(cands, theta_abs, theta_amb)]
 
 
 def wilson(k: int, n: int) -> tuple[float, float]:

@@ -1,26 +1,28 @@
 {
-  "_comment": "G4 retrieval gold. SPLIT INTO dev AND holdout (A12): thresholds are calibrated on dev ONLY and measured on holdout, so the reported top-1 is not the number the thresholds were fitted to. Queries are grounded in services that exist in the corpus (passport/driving-licence do NOT exist on Dawlati and appear here only as deliberate out-of-scope cases). Arabic queries are a mix of fosha and Lebanese dialect in Arabic script, matching how citizens actually type; Arabizi is excluded by decision (detect_language misroutes it — see PROGRESS Findings 2026-07-27).",
+  "_comment": "G4 retrieval gold. SPLIT INTO dev AND holdout (A12): thresholds are calibrated on dev ONLY and measured on holdout. REVISED 2026-07-28 for REPRESENTATIVENESS: the first version was dominated by bare service titles, which score cosine 1.000 and flattered top-1 to 100% while natural questions were failing («شو المستندات المطلوبة لإعادة قيد مطلقة؟» retrieved the wrong service). Real users type questions, not titles, so questions now dominate and only 2 bare titles remain. Arabic is a mix of fosha and Lebanese dialect in Arabic script; Arabizi is excluded by decision (detect_language misroutes it — PROGRESS Findings 2026-07-27).",
   "dev": [
-    {"query": "ما هي المستندات المطلوبة لتسجيل ولادة؟", "expect": "found", "post_id": 11554, "note": "fosha"},
-    {"query": "شو الأوراق المطلوبة لتجديد بطاقة الهوية؟", "expect": "found", "post_id": 11464, "note": "Lebanese dialect"},
-    {"query": "تسجيل زواج", "expect": "found", "post_id": 11552, "note": "bare title"},
+    {"query": "ما هي المستندات المطلوبة لتسجيل ولادة؟", "expect": "found", "post_id": 11554, "note": "fosha question"},
+    {"query": "شو الأوراق المطلوبة لتجديد بطاقة الهوية؟", "expect": "found", "post_id": 11464, "note": "dialect question"},
+    {"query": "شو المستندات المطلوبة لإعادة قيد مطلقة؟", "expect": "found", "post_id": 11532, "note": "dialect question - failed before boilerplate stripping"},
+    {"query": "ما هي المستندات المطلوبة لتسجيل وفاة؟", "expect": "found", "post_id": 11550, "note": "fosha question"},
     {"query": "How do I get an ID card?", "expect": "found", "post_id": 11464, "note": "EN cross-lingual"},
-    {"query": "كيف بسجل وفاة؟", "expect": "found", "post_id": 11550, "note": "dialect"},
+    {"query": "تسجيل زواج", "expect": "found", "post_id": 11552, "note": "bare title (minority case)"},
     {"query": "كيف أجدد جواز سفري؟", "expect": "abstain", "post_id": null, "note": "passport does NOT exist on Dawlati"},
-    {"query": "driving licence renewal", "expect": "abstain", "post_id": null, "note": "does not exist"}
+    {"query": "driving licence renewal", "expect": "abstain", "post_id": null, "note": "does not exist"},
+    {"query": "شو بدي لأستخرج بيان قيد؟", "expect": "found", "post_id": 11548, "note": "dialect question, civil extract"}
   ],
   "holdout": [
-    {"query": "تسجيل طلاق", "expect": "found", "post_id": 11568, "note": "bare title"},
-    {"query": "بيان قيد عائلي وإفرادي", "expect": "found", "post_id": 11548, "note": "civil extract"},
-    {"query": "how to register a marriage", "expect": "found", "post_id": 11552, "note": "EN cross-lingual"},
+    {"query": "شو الأوراق لتسجيل ولادة؟", "expect": "found", "post_id": 11554, "note": "dialect, short"},
+    {"query": "ما هي إجراءات تسجيل طلاق؟", "expect": "found", "post_id": 11568, "note": "fosha question"},
+    {"query": "What documents do I need to register a birth?", "expect": "found", "post_id": 11554, "note": "EN cross-lingual question"},
     {"query": "شو بدي لتسجيل ولادة طفلي؟", "expect": "found", "post_id": 11554, "note": "dialect, Maria's demo phrasing"},
-    {"query": "أنا أجنبية ومتزوجة من لبناني، كيف بقدر أحصل على الجنسية اللبنانية؟", "expect": "found", "post_id": 11476, "note": "Maria demo Q3"},
-    {"query": "وثيقة ولادة واردة من الخارج", "expect": "found", "post_id": 11528, "note": "from-abroad variant"},
-    {"query": "محضر اعتراف بولادة غير شرعية", "expect": "found", "post_id": 11518, "note": "verified-clean service"},
-    {"query": "إعادة قيد مطلقة", "expect": "found", "post_id": 11532, "note": "the demo service"},
-    {"query": "كيف بطلع رخصة سياقة؟", "expect": "abstain", "post_id": null, "note": "driving licence does not exist"},
-    {"query": "how do I open a bank account", "expect": "abstain", "post_id": null, "note": "not a government service on Dawlati"},
-    {"query": "وثيقة زواج واردة من الخارج", "expect": "clarify", "post_id": null, "note": "4 near-identical services differ only by spouse nationality (11502/11504/11506/11512) — genuinely ambiguous"},
-    {"query": "بيان قيد", "expect": "clarify", "post_id": null, "note": "matches several civil-extract services"}
+    {"query": "أنا أجنبية ومتزوجة من لبناني، كيف بقدر أحصل على الجنسية اللبنانية؟", "expect": "found", "post_id": 11476, "note": "Maria demo Q3 - long natural sentence"},
+    {"query": "شو المستندات لوثيقة ولادة واردة من الخارج؟", "expect": "found", "post_id": 11528, "note": "from-abroad variant"},
+    {"query": "how to register a marriage in Lebanon", "expect": "found", "post_id": 11552, "note": "EN cross-lingual"},
+    {"query": "محضر اعتراف بولادة غير شرعية", "expect": "found", "post_id": 11518, "note": "bare title (minority case)"},
+    {"query": "كيف بطلع رخصة سياقة؟", "expect": "abstain", "post_id": null, "note": "driving licence does not exist; HARD case - the corpus has grazing/fishing/forestry licences, so this is semantically close to real content"},
+    {"query": "how do I open a bank account", "expect": "abstain", "post_id": null, "note": "not a government service at all"},
+    {"query": "شو بدي لأجدد جواز سفري؟", "expect": "abstain", "post_id": null, "note": "passport, dialect phrasing"},
+    {"query": "وثيقة زواج واردة من الخارج", "expect": "clarify", "post_id": null, "note": "4 near-identical services differ only by spouse nationality (11502/11504/11506/11512)"}
   ]
 }

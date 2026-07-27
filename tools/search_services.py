@@ -12,6 +12,7 @@ service, and averaging would punish long services for having many chunks.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from agents.models import RetrievedCandidate
@@ -25,6 +26,34 @@ _bm25 = None
 _bm25_ids: list[int] = []
 _records: dict[int, dict] = {}
 _collection = None
+
+
+# Interrogative boilerplate. Users ask «شو المستندات المطلوبة لتسجيل ولادة؟» but the index holds
+# «تسجيل ولادة» — the question wrapper is 60% of the query and dilutes the embedding until the
+# service name stops dominating. Measured before this was added: «شو المستندات المطلوبة لإعادة
+# قيد مطلقة؟» retrieved the WRONG service at cos 0.483, while the bare title «إعادة قيد مطلقة»
+# scored 1.000 on the right one. Stripping is applied as an EXTRA channel, never as a
+# replacement — if the pattern misfires, the raw query still votes.
+_BOILERPLATE = re.compile(
+    r"^\s*(?:"
+    r"شو\s+(?:هي\s+)?(?:المستندات|الأوراق|الاوراق|الوثائق)\s+(?:المطلوبة|اللازمة)?\s*(?:ل|لـ)?"
+    r"|ما\s+هي\s+(?:المستندات|الأوراق|الوثائق)\s+(?:المطلوبة|اللازمة)?\s*(?:ل|لـ)?"
+    r"|شو\s+بدي\s*(?:ل|لـ)?"
+    r"|كيف\s+(?:بسجل|أسجل|اسجل|بطلع|أطلع|بقدر|يمكنني|احصل|أحصل\s+على)\s*(?:ل|لـ)?"
+    r"|ما\s+هي\s+إجراءات\s*"
+    r"|what\s+documents?\s+(?:do\s+i\s+need\s+)?(?:to|for)\s+"
+    r"|what\s+(?:do\s+)?i\s+need\s+(?:to|for)\s+"
+    r"|how\s+(?:do|can)\s+i\s+(?:get|register|obtain|apply\s+for)\s+"
+    r"|how\s+to\s+(?:get|register|obtain|apply\s+for)\s+"
+    r")", re.I)
+_TRAILING_Q = re.compile(r"[?؟\s]+$")
+
+
+def strip_boilerplate(query: str) -> str:
+    """Reduce a natural question toward the service name. Returns '' if nothing was stripped."""
+    q = _TRAILING_Q.sub("", query or "")
+    stripped = _BOILERPLATE.sub("", q).strip()
+    return stripped if stripped and stripped != q.strip() else ""
 
 
 def _tokens(text: str) -> list[str]:
@@ -103,12 +132,29 @@ def dense_ranked(query: str, k: int) -> tuple[list[int], dict[int, float]]:
 
 
 def search_services(query: str, k: int = 5) -> list[RetrievedCandidate]:
-    """RRF-fused candidates, best first. This is the `search_fn` the graph's retrieve node takes."""
+    """RRF-fused candidates, best first. This is the `search_fn` the graph's retrieve node takes.
+
+    Up to FOUR channels: BM25 and dense over the raw query, plus BM25 and dense over the
+    boilerplate-stripped query when stripping changed anything. RRF is built to fuse exactly this
+    kind of heterogeneous evidence, and adding the stripped query as extra votes rather than as a
+    replacement means a misfiring strip pattern can never lose a result the raw query found.
+    """
     _load_bm25()
     bm = bm25_ranked(query, k * 2)
     dn, cos = dense_ranked(query, k * 2)
-    fused = rrf_fuse(bm, dn)[:k]
+    channels = [bm, dn]
 
+    core = strip_boilerplate(query)
+    if core:
+        bm_c = bm25_ranked(core, k * 2)
+        dn_c, cos_c = dense_ranked(core, k * 2)
+        channels += [bm_c, dn_c]
+        # report the BEST cosine seen for a service across both phrasings — the stripped form is
+        # the one that actually resembles the indexed title, so it is usually the honest score
+        for pid, c in cos_c.items():
+            cos[pid] = max(cos.get(pid, 0.0), c)
+
+    fused = rrf_fuse(*channels)[:k]
     bm_rank = {pid: i + 1 for i, pid in enumerate(bm)}
     return [
         RetrievedCandidate(

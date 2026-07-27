@@ -31,6 +31,34 @@ def load_thresholds() -> tuple[float, float, bool]:
     return DEFAULT_THETA_ABS, DEFAULT_THETA_AMB, False
 
 
+def _cos(c) -> float:
+    v = getattr(c, "dense_cos", None)
+    if v is None and isinstance(c, dict):
+        v = c.get("dense_cos")
+    return float(v or 0.0)
+
+
+def classify_outcome(candidates, theta_abs: float, theta_amb: float) -> str:
+    """found | ambiguous | not_found — THE single decision function.
+
+    Both this node and `tests/gates/check_g4.py` call it, and that is the point: they diverged
+    once (the gate scored on cosine while the node still thresholded on rrf_score), so the gate
+    passed while the live agent abstained on a valid demo query. A gate that measures different
+    logic from the runtime measures nothing.
+
+    Abstention reads COSINE, not the RRF score. RRF depends only on RANK, so its top-1 value is
+    ~constant (0.016-0.033 measured across the whole gold set) whether the match is perfect or
+    nonsense — no RRF threshold can separate in-scope from out-of-scope.
+    """
+    if not candidates:
+        return "not_found"
+    top = _cos(candidates[0])
+    if top < theta_abs:
+        return "not_found"
+    gap = top - (_cos(candidates[1]) if len(candidates) > 1 else 0.0)
+    return "ambiguous" if gap < theta_amb else "found"
+
+
 def retrieve(state: dict, search_fn=None) -> dict:
     """Populate `retrieved` and decide the routing outcome.
 
@@ -53,23 +81,18 @@ def retrieve(state: dict, search_fn=None) -> dict:
         return with_trace(state, "retrieve", {"retrieved": [], "retrieval_outcome": "not_found"},
                           mode=mode, n=0, outcome="not_found", calibrated=calibrated)
 
-    scored = [(c["post_id"] if isinstance(c, dict) else c.post_id,
-               c["rrf_score"] if isinstance(c, dict) else c.rrf_score) for c in candidates]
-    scored.sort(key=lambda kv: (-kv[1], kv[0]))
-    top_score = scored[0][1]
-    gap = margin(scored)
-
-    if top_score < theta_abs:
-        outcome = "not_found"
-    elif gap < theta_amb:
-        outcome = "ambiguous"
-    else:
-        outcome = "found"
+    outcome = classify_outcome(candidates, theta_abs, theta_amb)
+    top_cos = _cos(candidates[0])
+    gap = top_cos - (_cos(candidates[1]) if len(candidates) > 1 else 0.0)
+    rrf = [(c["post_id"] if isinstance(c, dict) else c.post_id,
+            c["rrf_score"] if isinstance(c, dict) else c.rrf_score) for c in candidates]
 
     return with_trace(
         state, "retrieve",
         {"retrieved": candidates, "retrieval_outcome": outcome},
-        mode=mode, n=len(candidates), outcome=outcome, top_score=round(top_score, 5),
-        margin=(None if gap == float("inf") else round(gap, 5)),
+        mode=mode, n=len(candidates), outcome=outcome,
+        top_cos=round(top_cos, 4), cos_gap=round(gap, 4),
+        top_rrf=round(rrf[0][1], 5) if rrf else None,
+        rrf_margin=(None if margin(rrf) == float("inf") else round(margin(rrf), 5)),
         theta_abs=theta_abs, theta_amb=theta_amb, calibrated=calibrated,
     )
