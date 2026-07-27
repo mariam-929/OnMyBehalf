@@ -246,6 +246,19 @@ unless a member picks one up.
 
 ## Findings / surprises
 
+- **2026-07-27 — ARABIZI IS MISROUTED AS ENGLISH (found answering Ghina's Job-C question).**
+  `detect_language` (FR1) decides on Arabic-vs-Latin letter ratio, so Latin-script Arabic —
+  «shu badde la sajjel zawej» — scores 0 Arabic letters and returns `lang="en"`. Measured:
+  fosha ✅ ar · Lebanese dialect in Arabic script ✅ ar · **Arabizi ❌ en** · Arabic+English mixed
+  ❌ en. Consequence: the agent answers an Arabic speaker in English and then matches Latin text
+  against an Arabic corpus — it does not crash, it quietly does the wrong thing. **Arabizi is
+  extremely common in Lebanon, so this is a real gap, not a corner case.** Proper fix is
+  transliteration detection (not a 2-day item). DECISION: keep Arabizi OUT of the demo questions;
+  carry 1–2 Arabizi cases in the eval set as a KNOWN-FAIL and write it up as failure mode #2
+  (the brief requires ≥2 analysed modes). Job-C demo questions are therefore specified as Arabic
+  script, fosha + Lebanese dialect, with the "messy" case messy IN ARABIC (typos, no punctuation,
+  telegraphic) rather than transliterated.
+
 - **2026-07-27 — ⭐ STRUCTURAL: a flat document list cannot represent these services (Maria + Ghina,
   G2 human check, independently raised by both).** The deepest G2 finding is not extraction noise —
   it is a **data-model mismatch**. `CorpusRecord.sections.required_documents` is `list[str]`, but the
