@@ -14,7 +14,14 @@ from __future__ import annotations
 from agents.nodes.trace import with_trace
 
 MAX_REPLANS = 1
-MAX_MODEL_TOOL_CALLS = 6   # N3 cap
+# N3 caps how many tool calls the MODEL may schedule. It is deliberately NOT a cap on how many
+# documents the citizen is shown: applying it to local document resolution silently truncated the
+# answer. #11610 publishes 29 required documents and the answer carried 6 — 23 requirements dropped
+# without a word, on 25 of 193 services (104 documents in total). `resolve_document` is local
+# (corpus + curated lookup, no HTTP) and measures ~60 ms, so resolving all 29 costs ~1.4 s on the
+# worst service in the corpus and nothing at all on any service with 6 documents or fewer.
+# An incomplete checklist is a wrong answer to a citizen; 1.4 s is a latency line in a report.
+MAX_MODEL_TOOL_CALLS = 6   # N3 cap — MODEL-scheduled calls only, never the display list
 DEGRADE_ABOVE_DOCS = 4     # >4 documents => skip per-doc freshness, check the service only
 
 
@@ -49,14 +56,15 @@ def research(state: dict, tools: dict | None = None) -> dict:
     record = state.get("service_record") or {}
     doc_names = ((record.get("sections") or {}).get("required_documents")) or []
 
-    # --- resolve documents (bounded) ---------------------------------------
-    budget = MAX_MODEL_TOOL_CALLS
+    # --- resolve EVERY published document ----------------------------------
+    # Every document the source lists must reach the answer, resolved or not. Whether we could
+    # find where to obtain it is a separate question from whether the citizen needs it, and only
+    # the source decides the second one. See the note on MAX_MODEL_TOOL_CALLS above.
     resolve = tools.get("resolve_document")
     if resolve:
-        for name in doc_names[:budget]:
+        for name in doc_names:
             documents.append(resolve(name))
             calls.append({"tool": "resolve_document", "arg": name[:60]})
-        budget -= min(len(doc_names), budget)
 
     # --- freshness: DETERMINISTIC system step, not a model decision (N3) ----
     degraded = len(doc_names) > DEGRADE_ABOVE_DOCS
@@ -84,4 +92,9 @@ def research(state: dict, tools: dict | None = None) -> dict:
          "live_lookup": state.get("live_lookup")},
         mode="live", n_documents=len(documents), tool_calls=len(calls), calls=calls,
         per_doc_freshness_degraded=degraded,
+        # Both counts are traced so the completeness invariant is auditable from the evidence
+        # artefact alone: n_resolved MUST equal n_source_documents. When they diverged, the answer
+        # was quietly short and nothing on screen or in the trace said so.
+        n_source_documents=len(doc_names), n_resolved=len(documents),
+        documents_complete=len(documents) == len(doc_names),
     )
