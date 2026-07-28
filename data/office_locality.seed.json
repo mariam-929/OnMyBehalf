@@ -1,0 +1,47 @@
+{
+  "_what_this_is": "PROTOTYPE locality table for the trip-ordering feature. Covers only the offices the two demo services touch. The corpus contains 67 distinct authority / where_to_apply strings; the rest are unfilled human work.",
+  "_rules": [
+    "Never invent a locality. If it is not sourced or structurally known, omit the office and the planner will report it as unknown.",
+    "locality_source must say where the value came from. 'parent_ministry_assumed' is an ASSUMPTION, not a fact: the directorate is assumed to sit at its parent ministry's published address. A directorate may sit elsewhere; this is flagged in the UI as approximate.",
+    "kind=citizen_local means the office is per-citizen (أقلام النفوس serve the locality where a family is registered). No address applies and none should be added."
+  ],
+  "_source_note": "وزارة الداخلية والبلديات publishes 'الحمرا، بيروت، لبنان' in Dawlati's /en/directory blob. In data/contacts.json that value is stored in `opening_hours` and '8AM-2PM' in `address` — the two fields are transposed for this record. tools/locality.repair_swapped_contact_fields() detects and undoes it.",
+  "_unused_field_note": "Opening hours are deliberately absent. Every contact record in the source publishes the identical '8AM-2PM', so hours cannot discriminate between offices and the planner does not pretend to schedule around them.",
+  "offices": {
+    "المديرية العامة للأحوال الشخصية – دائرة المغتربين": {
+      "kind": "fixed",
+      "locality": "الحمرا، بيروت",
+      "region": "beirut",
+      "locality_source": "parent_ministry_assumed",
+      "note": "Assumed to be at the parent ministry (وزارة الداخلية والبلديات, الحمرا، بيروت). Not independently verified."
+    },
+    "المديرية العامة للأحوال الشخصية – دائرة شؤون الجنسية والقضايا": {
+      "kind": "fixed",
+      "locality": "الحمرا، بيروت",
+      "region": "beirut",
+      "locality_source": "parent_ministry_assumed",
+      "note": "Assumed to be at the parent ministry (وزارة الداخلية والبلديات, الحمرا، بيروت). Not independently verified."
+    },
+    "المديرية العامة للأحوال الشخصية – دوائر النفوس أو أقلام النفوس": {
+      "kind": "citizen_local",
+      "locality": null,
+      "region": null,
+      "locality_source": "structural",
+      "note": "Per-locality: a citizen uses the قلم النفوس where their family is registered."
+    },
+    "المديرية العامة للأحوال الشخصية – دوائر وأقلام النفوس": {
+      "kind": "citizen_local",
+      "locality": null,
+      "region": null,
+      "locality_source": "structural",
+      "note": "Same office as the entry above, extracted with different wording by the splitter."
+    },
+    "المديرية العامة للأحوال الشخصية (أقلام النفوس)": {
+      "kind": "citizen_local",
+      "locality": null,
+      "region": null,
+      "locality_source": "structural",
+      "note": "where_to_apply wording for #11532."
+    }
+  }
+}

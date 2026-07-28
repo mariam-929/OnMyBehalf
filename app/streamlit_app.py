@@ -573,6 +573,18 @@ def render_sidebar() -> None:
             "Coverage is limited by Dawlati's published corpus. Missing services are not silently reconstructed from general knowledge."
         )
 
+        st.divider()
+        st.markdown("**Plan your trips** · prototype")
+        st.caption("Optional. If you tell us your area, we group the offices you must visit into "
+                   "as few journeys as possible and put the nearest first.")
+        st.selectbox(
+            "Which area are you coming from?",
+            ["— not specified —", "بيروت", "عرمون", "بعبدا", "عاليه", "الشوف", "المتن",
+             "جونية", "كسروان", "جبيل", "طرابلس", "الكورة", "صيدا", "صور", "النبطية",
+             "زحلة", "بعلبك"],
+            key="origin_city",
+        )
+
         with st.expander("Demo cases", expanded=False):
             st.code("شو المستندات المطلوبة لإعادة قيد مطلقة؟", language=None)
             st.code("اكتساب المرأة الأجنبية الجنسية اللبنانية", language=None)
@@ -1135,6 +1147,69 @@ def render_answer(env: dict) -> None:
     render_conditional_flags(out.get("conditional_flags") or [])
     render_caveats(out.get("caveats") or [])
     render_documents(out)
+    # After the checklist: it is derived FROM the checklist, and only makes sense once the citizen
+    # knows what they are collecting.
+    render_itinerary(out)
+
+
+def render_itinerary(out: dict) -> None:
+    """Group the offices the citizen must visit into as few journeys as possible.
+
+    PROTOTYPE, and labelled as one on screen. Ordering is over coarse hand-declared regions — no
+    coordinates and no travel-time estimate — and locality data covers only the offices the demo
+    services touch. Offices with no declared locality are listed as unknown rather than guessed:
+    an invented office address would be the one kind of fabrication this system exists to prevent.
+    """
+    from tools.locality import plan_itinerary
+
+    service = out.get("service") or {}
+    offices = [d.get("where_to_obtain") for d in (out.get("required_documents") or [])]
+    offices.append(service.get("where_to_apply"))
+    offices = [o for o in offices if o]
+    if not offices:
+        return
+
+    city = st.session_state.get("origin_city")
+    city = None if not city or city.startswith("—") else city
+    plan = plan_itinerary(offices, city)
+    if not plan["trips"] and not plan["unknown_offices"]:
+        return
+
+    render_eyebrow("PROTOTYPE — TRIP PLANNING")
+    st.markdown("### Getting the papers: %d journey(s)" % plan["n_trips"])
+    if plan["ordered"]:
+        st.caption("Ordered from **%s** outwards, nearest first. Offices in the same area are "
+                   "grouped into one journey." % esc(city))
+    else:
+        st.caption("Pick your area in the sidebar and these journeys will be ordered nearest-first.")
+
+    for trip in plan["trips"]:
+        with st.container(border=True):
+            head = "Journey %d — %s" % (trip["order"], trip["region_label"])
+            if trip["hops_from_origin"] == 0:
+                head += "  ·  your own area"
+            st.markdown("**%s**" % esc(head))
+            for stop in trip["stops"]:
+                render_value(stop["office"], size="1.0rem", weight="650")
+                if stop.get("locality"):
+                    st.caption("Where: %s" % stop["locality"])
+                if stop.get("locality_source") == "parent_ministry_assumed":
+                    st.caption("⚠️ Location assumed from the parent ministry's published address — "
+                               "not independently verified. Confirm before travelling.")
+                elif stop.get("kind") == "citizen_local":
+                    st.caption("This office serves the area where your family is registered, so it "
+                               "is local to you — there is no single address.")
+
+    if plan["unknown_offices"]:
+        st.warning("We do not have a location for %d of the offices below, so they are not placed "
+                   "in a journey. We would rather say so than guess."
+                   % len(plan["unknown_offices"]))
+        for stop in plan["unknown_offices"]:
+            render_value("• %s" % stop["office"], size="0.95rem", weight="550")
+
+    st.caption("Prototype: coarse area ordering only — no map, no distances, no travel times. "
+               "Opening hours are not used because every office in the source publishes the same "
+               "8AM–2PM. Locality data covers only part of the corpus.")
 
 
 def render_service_option(item: dict, index: int, noun: str) -> None:
