@@ -200,6 +200,12 @@ _(historical planning log below — CURRENT STATE above supersedes it for "where
   Two enhancement findings logged below (opening hours; ministry hotlines).
 - ~~G1 — Mariam~~ ✅ **SIGNED 2026-07-25:** all 5 URLs load, Arabic titles match the catalog
   (pages are sparse — title only — as expected since content is in the ajax endpoint). **G1 FULLY PASSED.**
+- **A25 competitor evidence — needs any teammate, ~5 min.** Open dawlati.gov.lb in a normal browser
+  (VPN off, not logged in) and re-run at least 2 of the 5: search `بطاقة الهوية`, `تسجيل ولادة`,
+  `جواز سفر`, `ID card`, `رشوة`. Confirm the three Arabic service queries all return only the generic
+  «الخدمات» index page and that English "ID card" returns "About" + "Homepage – Intalio". Then sign
+  the table at the bottom of `report/evidence/competitor.md`. **Also confirm you see no chat widget
+  anywhere** — the whole comparator switch rests on that.
 
 ## Owners (team: Gaby, Mariam, Ali, Ghina, Maria; procedure/Arabic experts = Maria + Ghina)
 Gate task owner + independent reviewer (reviewer ≠ producer). Adjust freely — these are proposed
@@ -278,7 +284,9 @@ unless a member picks one up.
 - [ ] 24 test cases + `run_eval.py` + claim-level gold + all-24 manual audit → G8 — Owner: __
 - [ ] prompt iterations v2/v3 (all three, logged) — Owner: __
 - [ ] UI finish + `--offline` mode → G9 — Owner: __
-- [ ] competitor 5-query comparison (vs OMSAR Assistant) — Owner: __
+- [x] competitor 5-query comparison — Owner: Claude (2026-07-28). **OMSAR Assistant no longer
+      exists on the public site** → baseline switched to Dawlati's own site search + directory.
+      `report/evidence/competitor.md` + 5 screenshots. Human re-run of ≥2 queries still PENDING.
 - [ ] evidence-capture sweep; report §§1–4 drafted — Owner: __
 
 ### Jul 29 (deadline)
@@ -298,7 +306,7 @@ unless a member picks one up.
 | Eval numbers | eval_report.json + audit.md | G8 | tests/eval_report.json | [ ] |
 | Hallucination audit | 24-answer audit notes | G8 | report/evidence/audit.md | [ ] |
 | Demo screenshots | UI (EN + AR RTL + failure) | G9 | report/evidence/screens/ | [ ] |
-| Competitor comparison | 5-query table | **G0/G1 (moved earlier — A25)** | report/evidence/competitor.md | [ ] |
+| Competitor comparison | 5-query table | **G0/G1 (moved earlier — A25)** | report/evidence/competitor.md | [x] 2026-07-28 — 5 queries + 5 screenshots vs **Dawlati site search** (OMSAR Assistant gone; see Findings). Human re-run PENDING |
 | Architecture diagram (A20) | final pipeline figure | Jul 28 | report/evidence/architecture.* | [ ] |
 | Appendix assembly (A20) | prompt appendix + raw eval logs + AI log collated | Jul 29 | report/appendix/ | [ ] |
 | Contact coverage (A27) | authorities-with-contact count | G1b | report/evidence/contacts_coverage.md | [x] 126 records; 3/3 corpus authorities, 21/22 taxonomy; **no per-authority phones exist** |
@@ -322,7 +330,22 @@ unless a member picks one up.
 | 2026-07-28 | **`Groq(..., max_retries=0)`** | The SDK's default 2 retries re-issued timed-out/429'd calls with backoff, so the 6 s/8 s per-request timeouts allowed 18.6–34.0 s of wall clock. Every model call has a deterministic fallback, so failing fast is the cheaper failure. **Do not reintroduce retries** |
 | 2026-07-27 | **SUPERSEDES the entry above:** conjoined-document splitting **adopted** after validation — recall 80% → **90%, G2 PASSES** | The earlier judgement that recall was "mechanically capped at 80%" was **wrong**, and is corrected here. It was right that splitting on «و» *generally* is unsafe (commonest conjunction, also a bound prefix), but wrong to conclude no rule was safe. A rule firing only where «و» directly prefixes a **closed list of document head-nouns** (صورة/وثيقة/بيان/شهادة/إفادة/محضر/تقرير/طلب/نسخة/إقامة) is lexical, not semantic. **Validated before adoption, not after:** it performs exactly **11 splits corpus-wide, all 11 inspected and correct — 8 of them on services no human verified**, which is an effective holdout. Decisive case: on unverified **#11568** it separates «بيان قيد عائلي للمطلقين» from «بيان قيد عائلي لوالدي المطلقة» — which **Ghina had independently verified as two separate documents on the sibling service #11532**, so the rule reproduces a human judgement it was never fitted to. Effect: **recall 80%→90%, precision 82%→81%, 9/180 services touched, +12 documents.** Adopted now because it is cheapest before G4 indexes the corpus. Residual 4 misses are #11464 documents that live in the notes section, not `required_documents_html` — a different change, not attempted. **G2 AUTO PASS + human check complete = G2 FULLY PASSED.** |
 
+| 2026-07-28 | **Competitor baseline switched: OMSAR Assistant chatbot → Dawlati's own site search + directory** | The chatbot recorded at recon (`CLAUDE.md:119`) **is not on the public site as of 2026-07-28** — verified on EN/AR homepages, `/en/directory/`, `/en/contact-us/` (only iframe anywhere is the UserWay a11y widget) and via REST search (`assistant`→0, `chatbot`→0, `مساعد`→1 = «طلب مساعدة», a form service). Either removed or behind the login-walled portal (out of scope). Site search is the better baseline anyway: it is the real status quo for a non-logged-in citizen. Evidence: `report/evidence/competitor.md` |
+
 ## Findings / surprises
+
+- **2026-07-28 — Dawlati's public search does not index its own service directory, and the
+  "OMSAR Assistant" we planned to benchmark against no longer exists.** Running the 5 eval queries
+  through `/?s=`: **بطاقة الهوية, تسجيل ولادة and جواز سفر all return the identical single result** —
+  the generic directory index page «الخدمات», never the service. English **"ID card" returns 2
+  results: "About" and "Homepage – Intalio"**, the CMS vendor's leftover template page — zero
+  services. Only «رشوة» behaves sensibly (No Results Found). Yet REST `wp/v2/search` *does* find the
+  real records (`تسجيل ولادة` → the service; `جواز سفر` → «إصدار جواز سفر للخيل»). So the content is
+  reachable by API but not by the citizen-facing search — a content-ops defect for OMSAR,
+  independent of this project. Query 4 also **independently reproduces the horse-passport finding
+  from the live site**, which is a much stronger way to present it in the demo than citing our own
+  corpus. Fair-to-Dawlati caveat for Q&A: a keyword search cannot hallucinate, so "no
+  hallucinations" is **not** a differentiator against it — G1–G4/G6 in `competitor.md` are.
 
 - **2026-07-28 — THE UI NEVER LOADED `.env`, so every demo would have run with NO MODEL.**
   `app/streamlit_app.py` never called `load_dotenv` — only `run_eval.py`, `check_g0.py` and
