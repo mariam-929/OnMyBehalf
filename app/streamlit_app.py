@@ -658,7 +658,7 @@ def render_service_identity(service: dict, language: str) -> None:
 
     if language == "en":
         st.markdown("### Official record used for the answer")
-        st.caption("Dawlati's official service title is preserved in Arabic; it is not translated by the UI.")
+        st.caption("The official service title is preserved in Arabic; it is not translated by the UI.")
     else:
         st.markdown("### الخدمة الرسمية المطابقة")
 
@@ -671,18 +671,42 @@ def render_service_identity(service: dict, language: str) -> None:
     elif language == "en":
         st.caption("No English title or stored English gloss was returned.")
 
+    domain = external_domain(service)
     render_native_link(
-        "Open official Dawlati service page ↗",
+        f"Open official {domain} page ↗" if domain else "Open official Dawlati service page ↗",
         service.get("source_url"),
         help_text="Opens the source record used for the factual fields below.",
     )
 
 
+def external_domain(service: dict) -> str | None:
+    """The non-Dawlati domain this answer cites, or None for an ordinary Dawlati answer.
+
+    Derived from the cited URL rather than a new field: the URL is already the thing the citizen
+    can click and check, so it cannot disagree with the badge shown beside it.
+    """
+    url = service.get("source_url") or ""
+    if not url or "dawlati.gov.lb" in url:
+        return None
+    host = url.split("//", 1)[-1].split("/", 1)[0]
+    return host[4:] if host.startswith("www.") else host
+
+
 def render_freshness_banner(service: dict) -> None:
     freshness = service.get("freshness") or {}
     status = effective_freshness_status(freshness)
+    domain = external_domain(service)
 
-    if status == "unchanged":
+    if domain:
+        # An external answer can never be "live-verified" in the A08 sense — that source publishes
+        # no modification timestamp to compare against. Saying "could not confirm the Dawlati page"
+        # here would name the wrong site AND imply a check that was never applicable.
+        st.warning(
+            f"SOURCE OUTSIDE DAWLATI — this service is not published on Dawlati. The facts below "
+            f"come from {domain}, the official site of the issuing authority. That source "
+            f"publishes no modification timestamp, so change-detection cannot be applied."
+        )
+    elif status == "unchanged":
         st.success("LIVE SOURCE CHECK PASSED — the Dawlati page was unchanged from the stored snapshot.")
     elif status == "changed":
         st.error("SOURCE CHANGED — the live Dawlati page differs from the stored snapshot. Treat this answer as review-required.")

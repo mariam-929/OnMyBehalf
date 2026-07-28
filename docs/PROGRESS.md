@@ -200,6 +200,15 @@ _(historical planning log below — CURRENT STATE above supersedes it for "where
   Two enhancement findings logged below (opening hours; ministry hotlines).
 - ~~G1 — Mariam~~ ✅ **SIGNED 2026-07-25:** all 5 URLs load, Arabic titles match the catalog
   (pages are sparse — title only — as expected since content is in the ajax endpoint). **G1 FULLY PASSED.**
+- **External-source branch — needs a decision from Mariam before it can merge.** Branch
+  `external-source-fallback` is complete, tested and green (eval 31.8% vs 36.4%, 0 hallucinations,
+  159 unit tests, G5/G6/G9 PASS) but is **NOT merged into `fix-document-truncation`**. Judgement
+  calls a human should confirm: (1) the `edge_absent_1` gold change; (2) that answering from a
+  second official site is in scope at all, given SCOPE §15 cut open-web retrieval — this is
+  curated-source, not open-web, but it is still a scope decision; (3) whether a **0.05 confidence**
+  passport answer (floor: non-core 0.5, −0.2 unverified, −0.4 branch) is the right thing to show on
+  stage, or whether external answers deserve their own base. **The confidence heuristic was NOT
+  tuned to flatter the demo — that is deliberate.**
 - **A25 competitor evidence — needs any teammate, ~5 min.** Open dawlati.gov.lb in a normal browser
   (VPN off, not logged in) and re-run at least 2 of the 5: search `بطاقة الهوية`, `تسجيل ولادة`,
   `جواز سفر`, `ID card`, `رشوة`. Confirm the three Arabic service queries all return only the generic
@@ -330,9 +339,49 @@ unless a member picks one up.
 | 2026-07-28 | **`Groq(..., max_retries=0)`** | The SDK's default 2 retries re-issued timed-out/429'd calls with backoff, so the 6 s/8 s per-request timeouts allowed 18.6–34.0 s of wall clock. Every model call has a deterministic fallback, so failing fast is the cheaper failure. **Do not reintroduce retries** |
 | 2026-07-27 | **SUPERSEDES the entry above:** conjoined-document splitting **adopted** after validation — recall 80% → **90%, G2 PASSES** | The earlier judgement that recall was "mechanically capped at 80%" was **wrong**, and is corrected here. It was right that splitting on «و» *generally* is unsafe (commonest conjunction, also a bound prefix), but wrong to conclude no rule was safe. A rule firing only where «و» directly prefixes a **closed list of document head-nouns** (صورة/وثيقة/بيان/شهادة/إفادة/محضر/تقرير/طلب/نسخة/إقامة) is lexical, not semantic. **Validated before adoption, not after:** it performs exactly **11 splits corpus-wide, all 11 inspected and correct — 8 of them on services no human verified**, which is an effective holdout. Decisive case: on unverified **#11568** it separates «بيان قيد عائلي للمطلقين» from «بيان قيد عائلي لوالدي المطلقة» — which **Ghina had independently verified as two separate documents on the sibling service #11532**, so the rule reproduces a human judgement it was never fitted to. Effect: **recall 80%→90%, precision 82%→81%, 9/180 services touched, +12 documents.** Adopted now because it is cheapest before G4 indexes the corpus. Residual 4 misses are #11464 documents that live in the notes section, not `required_documents_html` — a different change, not attempted. **G2 AUTO PASS + human check complete = G2 FULLY PASSED.** |
 
+| 2026-07-28 | **External-source fallback added on branch `external-source-fallback` (NOT merged)** — passport questions are answered from general-security.gov.lb when Dawlati has nothing | Report §2's biggest gap (passports/licences absent from Dawlati) terminated in `service_not_found`. Three curated URLs + deterministic regex extraction, wired to fire ONLY on the `not_found` branch, so no path that answers today can reach it. `external_fn=None` (the default) is a pure pass-through. Measured: failure rate **36.4% → 31.8%**, hallucinations **0** (see the eval-metric note below), 159 unit tests green, G5/G6/G9 still PASS. **Per-document resolution is deliberately NOT offered for external records** — measured 1/13 resolved and that one was WRONG (a rule attributed to the civil-registry directorate at 0.6367 while a genuine line abstained at 0.7004), so FR4's "abstain rather than attach a doubtful source" applies. |
+| 2026-07-28 | **`edge_absent_1` gold expectation changed `service_not_found` → `answer` + a new `expect_source_domain` check** | Passport is still absent from Dawlati (report §2 unchanged); what changed is that abstaining is no longer the best available answer. The new domain assertion stops the relaxed expectation passing on any answer at all — without it, a fallback to Dawlati's **horse passport** would have scored as a pass. `edge_absent_2/3` still expect `service_not_found` and keep guarding the abstention path. |
 | 2026-07-28 | **Competitor baseline switched: OMSAR Assistant chatbot → Dawlati's own site search + directory** | The chatbot recorded at recon (`CLAUDE.md:119`) **is not on the public site as of 2026-07-28** — verified on EN/AR homepages, `/en/directory/`, `/en/contact-us/` (only iframe anywhere is the UserWay a11y widget) and via REST search (`assistant`→0, `chatbot`→0, `مساعد`→1 = «طلب مساعدة», a form service). Either removed or behind the login-walled portal (out of scope). Site search is the better baseline anyway: it is the real status quo for a non-logged-in citizen. Evidence: `report/evidence/competitor.md` |
 
 ## Findings / surprises
+
+- **2026-07-28 — `--offline` returns ZERO required documents, for every service. PRE-EXISTING, not
+  introduced by the external-source branch — and it hits the G11 outage drill.** `runtime.answer()`
+  sets `tools = None` when `offline=True`, which drops `resolve_document` along with the two live
+  HTTP tools. But `resolve_document` is **local** (corpus + curated lookup, no network), so offline
+  mode disables the one thing that still works during an outage. Measured on «شو الأوراق المطلوبة
+  لتجديد بطاقة الهوية؟»: `offline=True` → **0 documents**, `offline=False` → **9 documents**. The
+  runtime docstring claims offline "still comes from the local corpus with citations", which is
+  currently false. Fix is one line (keep `resolve_document` in the offline tool dict) but it changes
+  behaviour for every query, so it was NOT done on the eve of submission — **decide before the G11
+  drill, because the drill currently demonstrates an answer with an empty checklist.**
+
+- **2026-07-28 — the eval's hallucination metric counted 13 phantom hallucinations the moment an
+  answer cited a second source.** `count_hallucinated_documents` resolved the cited `source_url`
+  against `data/corpus/*.json` and, finding nothing, returned EVERY document as fabricated ("cited
+  a source we cannot find"). Correct under its old assumption that Dawlati is the only source;
+  wrong once one answer legitimately cites general-security.gov.lb. The definition is unchanged —
+  a document absent from *the source it is attributed to* — so the check now falls back to
+  rebuilding the external record from its committed snapshot (`external_source.record_for_url`).
+  **The headline "0 hallucinations" is intact and is now a stronger claim**, because it is verified
+  against whichever source each answer cites rather than against one hardcoded corpus.
+
+- **2026-07-28 — general-security.gov.lb is far easier to consume than Dawlati, and its Arabic page
+  publishes LESS than its English one.** Plain `requests` + browser UA returns 200 with the
+  documents in the raw HTML — no Cloudflare, no Playwright, no hidden ajax endpoint (measured 6/6
+  over a minute, but **2.0–7.7 s** and one outright TLS-handshake timeout, which is why the design
+  is snapshot-first with a live fetch as an upgrade). Asymmetry worth a line in the report: the EN
+  biometric-passport page publishes a full **fees table** (5-year 6,000,000 L.L; 10-year
+  10,000,000 L.L) and the AR page publishes **no fees at all** — an Arabic-speaking citizen gets
+  less from their own government's site than an English-speaking one.
+
+- **2026-07-28 — two extraction traps on that site, both caught before they reached an answer.**
+  (1) A last-resort "any `<table>`" fee sweep captured the site's own **contact directory**, so
+  «Beirut Port center 01/584400» would have been rendered to a citizen as the *fee* for the
+  service. Removed — fees now come from a declared fees section or are null. (2) «الرسوم الشمسية»
+  means *photographs*, not fees; a bare «رسوم» match filed the passport photo specification under
+  what the citizen must pay. Both are pinned by regression tests in
+  `tests/unit/test_external_source.py`.
 
 - **2026-07-28 — Dawlati's public search does not index its own service directory, and the
   "OMSAR Assistant" we planned to benchmark against no longer exists.** Running the 5 eval queries

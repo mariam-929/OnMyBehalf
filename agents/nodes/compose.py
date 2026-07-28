@@ -57,6 +57,19 @@ def compute_confidence(*, is_core: bool, freshness_status: str, any_unresolved: 
 FALLBACK_REASONING = ("Matched the query to a Dawlati service and assembled its published "
                       "requirements. (Deterministic composition — no model available.)")
 
+
+def _fallback_reasoning(record: dict) -> str:
+    """Naming the wrong source is a factual error even when it is only the log line.
+
+    An external-source record did not come from Dawlati — Dawlati is precisely where it was NOT
+    found — so the deterministic reasoning must say which site actually supplied the facts.
+    """
+    domain = record.get("source_domain")
+    if not domain:
+        return FALLBACK_REASONING
+    return (f"Not published on Dawlati; assembled from the official source {domain}, which "
+            f"publishes this procedure. (Deterministic composition — no model available.)")
+
 # Hard cap on the narration wait. The free tier's latency is erratic (0.5-12.8 s for identical
 # calls, one eval case reaching 40 s end-to-end); the variance is the provider's, but an
 # unbounded wait would be ours. Past this we fall back to deterministic prose, which costs the
@@ -100,7 +113,7 @@ def narrate(state: dict, record: dict, documents: list, freshness, flags: list,
     the answer's prose rather than the answer's facts.
     """
     if adapter is None:
-        return FALLBACK_REASONING, None, {"mode": "deterministic"}
+        return _fallback_reasoning(record), None, {"mode": "deterministic"}
 
     lang = state.get("language", "ar")
     user = (f"Citizen's question ({lang}): {state.get('query','')}\n\n"
@@ -117,7 +130,7 @@ def narrate(state: dict, record: dict, documents: list, freshness, flags: list,
                                         timeout=NARRATION_TIMEOUT_S)
         return result.reasoning, result.summary, {"mode": "model", **meta}
     except Exception as exc:  # noqa: BLE001 — prose is never worth failing an answer over
-        return FALLBACK_REASONING, None, {"mode": "fallback", "error": str(exc)[:120]}
+        return _fallback_reasoning(record), None, {"mode": "fallback", "error": str(exc)[:120]}
 
 
 def compose(state: dict, curated_core: set[int] | None = None, adapter=None,
@@ -158,6 +171,20 @@ def compose(state: dict, curated_core: set[int] | None = None, adapter=None,
     )
 
     caveats = caveat_lines(flags, language)
+    # The citizen is entitled to know the answer did not come from the portal they were pointed at.
+    # Stated FIRST, before the conditional caveats, because provenance changes how much of the rest
+    # they should trust — and the freshness guarantee is genuinely weaker here (A08 change-detection
+    # needs a modification timestamp this source does not publish).
+    if record.get("source_domain"):
+        domain = record["source_domain"]
+        caveats.insert(0,
+                       f"This service is not published on Dawlati. The requirements below come "
+                       f"from the official site of the issuing authority ({domain}); verify "
+                       f"against that page before travelling to an office."
+                       if language == "en" else
+                       f"هذه المعاملة غير منشورة على دولتي. المعلومات أدناه مأخوذة من الموقع "
+                       f"الرسمي للجهة المصدرة ({domain})؛ يُرجى التأكد منها على تلك الصفحة قبل "
+                       f"التوجه إلى الدائرة.")
     if incomplete:
         caveats.append("The official source has not published complete details for this service."
                        if language == "en" else

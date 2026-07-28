@@ -8,12 +8,14 @@ from agents.nodes.compose import (
     compose, respond, respond_clarify, respond_error, respond_invalid, respond_not_found,
     validate_schema,
 )
+from agents.nodes.external import external_lookup_node, route_after_external
 from agents.nodes.intake import classify_intent, detect_language, validate_input
 from agents.nodes.research import plan_research, research
 from agents.nodes.retrieve import retrieve
 
 __all__ = [
     "detect_language", "validate_input", "classify_intent",
-    "retrieve", "plan_research", "research", "compose", "validate_schema", "respond",
+    "retrieve", "external_lookup_node", "route_after_external",
+    "plan_research", "research", "compose", "validate_schema", "respond",
     "respond_invalid", "respond_not_found", "respond_clarify", "respond_error",
 ]
