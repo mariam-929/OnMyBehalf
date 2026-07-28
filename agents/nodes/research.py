@@ -11,7 +11,11 @@ judge staleness will confabulate a judgement; a timestamp comparison will not.
 """
 from __future__ import annotations
 
+from agents.models import ResearchPlan
 from agents.nodes.trace import with_trace
+from agents.planning import accept_rescue, compile_plan, deterministic_plan
+
+PLAN_TIMEOUT_S = 5.0   # bounded like the other two model calls; fallback retries nothing
 
 MAX_REPLANS = 1
 # N3 caps how many tool calls the MODEL may schedule. It is deliberately NOT a cap on how many
@@ -37,13 +41,126 @@ def _as_dict(result) -> dict:
     return result.model_dump() if hasattr(result, "model_dump") else {}
 
 
+def _unresolved(documents: list[dict]) -> list[tuple[int, dict]]:
+    return [(i, d) for i, d in enumerate(documents)
+            if (d or {}).get("resolution") == "unresolved"]
+
+
+def plan_research(state: dict, adapter=None, system_prompt: str = "") -> dict:
+    """Ask the model WHICH unresolved documents to retry, and with what search key.
+
+    This is the `plan` step of the loop and it is grounded in an observation: the first pass has
+    already resolved every published document, so the model is planning against a measured failure
+    rather than speculating. Its budget is the rescue pass only — completeness is never delegated.
+
+    Every failure path produces `deterministic_plan()`, which retries NOTHING. That is exactly the
+    behaviour the system had before planning existed, so no model outage can make an answer worse
+    than today's.
+    """
+    record = state.get("service_record") or {}
+    documents = list(state.get("resolved_documents") or [])
+    query = state.get("query", "") or ""
+    pending = _unresolved(documents)
+
+    if not pending:
+        return with_trace(state, "plan_research", {"research_plan": deterministic_plan(query=query)},
+                          mode="nothing_to_retry", n_unresolved=0)
+
+    if adapter is None:
+        return with_trace(state, "plan_research", {"research_plan": deterministic_plan(query=query)},
+                          mode="fixture", n_unresolved=len(pending), retries_planned=0)
+
+    # The model sees INDICES and the source wording, and nothing it can turn into a displayed fact.
+    # The listing is capped: the whole request competes for an 8K TPM free-tier budget that the
+    # composer's prompt already eats into, and an over-long request is simply refused with a 429 —
+    # measured, repeatedly. A planner that never runs is worse than one that sees six documents.
+    listing = "\n".join(f"[{i}] {(d.get('name_ar') or '')[:80]}" for i, d in pending[:6])
+    user = (f"AUTHORITY: {((record.get('sections') or {}).get('where_to_apply') or '')[:70]}\n"
+            f"UNRESOLVED (retry by doc_index, optionally with a better search alias):\n{listing}")
+
+    try:
+        # reasoning_effort="low": this is a mechanical string-transformation task, not analysis, and
+        # generated reasoning tokens count against the same per-minute budget that was refusing the
+        # call outright.
+        result, meta = adapter.complete(system_prompt, user, ResearchPlan,
+                                        reasoning_effort="low", timeout=PLAN_TIMEOUT_S)
+    except Exception as exc:  # noqa: BLE001 — a planner outage must not degrade the answer
+        return with_trace(state, "plan_research",
+                          {"research_plan": deterministic_plan(query=query)},
+                          mode="fallback", n_unresolved=len(pending), retries_planned=0,
+                          error=str(exc)[:80])
+
+    plan = result.model_dump()
+    return with_trace(state, "plan_research", {"research_plan": plan}, mode="model",
+                      n_unresolved=len(pending),
+                      retries_planned=sum(1 for s in plan.get("plan") or []
+                                          if s.get("tool") == "resolve_document"),
+                      latency_s=meta.get("latency_s"))
+
+
+def rescue_pass(state: dict, tools: dict | None = None) -> dict:
+    """Execute the planned retries, and BELIEVE ONLY WHAT SURVIVES `accept_rescue`.
+
+    This is the `observe` step, and it is substantive because it can veto the model. Measured: a
+    naive retry resolved «طلب مقدم» to the Directorate of Antiquities at 0.7879 and a passport copy
+    to the Directorate of Animal Wealth at 0.7402 — both higher-scoring than a correct rescue. A
+    rejected rescue leaves the document unresolved, which is the honest outcome.
+
+    Indices are positional into `resolved_documents`, which Step 0 guarantees is one entry per
+    published document in source order.
+    """
+    record = state.get("service_record") or {}
+    documents = list(state.get("resolved_documents") or [])
+    replans = int(state.get("replans_used") or 0) + 1
+    authority = (record.get("sections") or {}).get("where_to_apply")
+    resolve = (tools or {}).get("resolve_document")
+
+    steps, rejections = compile_plan(state.get("research_plan"), record,
+                                    query=state.get("query", "") or "")
+    retries = [s for s in steps if s["tool"] == "resolve_document"]
+
+    accepted, refused, calls = 0, [], []
+    if resolve:
+        for step in retries:
+            idx = step["doc_index"]
+            if not (0 <= idx < len(documents)):
+                continue
+            result = _as_dict(resolve(step["search_key"]))
+            ok, why = accept_rescue(result, authority)
+            calls.append({"tool": "resolve_document", "arg": step["search_key"][:60],
+                          "result": ("accepted" if ok else "rejected") + f" — {why[:60]}"})
+            if ok:
+                # The DISPLAYED name is always the record's wording; the alias was only a key.
+                result["name_ar"] = step["display_name"]
+                documents[idx] = result
+                accepted += 1
+            else:
+                refused.append({"doc_index": idx, "searched_as": step["search_key"][:60],
+                                "reason": why[:100]})
+
+    return with_trace(
+        state, "research",
+        {"resolved_documents": documents, "replans_used": replans},
+        mode="rescue", tool_calls=len(calls), calls=calls,
+        retries_attempted=len(retries), rescues_accepted=accepted,
+        rescues_rejected=len(refused), rejected_detail=refused[:6],
+        plan_rejections=rejections[:6],
+        n_resolved=len(documents),
+        still_unresolved=len(_unresolved(documents)),
+    )
+
+
 def research(state: dict, tools: dict | None = None) -> dict:
-    """Execute the (single) research pass.
+    """Execute the research pass. Second entry runs the RESCUE pass, not a repeat of the first.
 
     `tools=None` is the fixture path: no external calls, resolved documents come from state.
     With `tools`, each entry is a callable keyed by tool name (resolve_document,
     check_freshness, live_service_lookup).
     """
+    # A plan in state means the router sent us back here after observing unresolved documents.
+    if state.get("research_plan"):
+        return rescue_pass(state, tools)
+
     replans = int(state.get("replans_used") or 0)
     documents = list(state.get("resolved_documents") or [])
     calls: list[dict] = []

@@ -120,8 +120,22 @@ class Narration(BaseModel):
 
 
 class PlanStep(BaseModel):
+    """One step of a model-proposed research plan.
+
+    Fields are FLAT rather than a nested `args: dict` (the v3 shape). Groq strict `json_schema`
+    requires every object to declare `additionalProperties: false` and list its properties, which
+    an open dict cannot satisfy — the model would have been unable to emit any argument at all.
+    `compile_plan` still accepts the nested form, so either shape validates.
+
+    `doc_index` indexes the retrieved record's `required_documents`. Documents are addressed by
+    POSITION, never by name: `resolve_document` echoes its input into the displayed
+    `ResolvedDocument.name_ar`, so a free-text name here would let the model put words on screen as
+    a required document. `alias` is a search key only and is never displayed.
+    """
     tool: Literal["resolve_document", "check_freshness", "live_service_lookup"]
-    args: dict
+    doc_index: Optional[int] = None
+    alias: Optional[str] = None
+    query: Optional[str] = None
 
 
 class ResearchPlan(BaseModel):

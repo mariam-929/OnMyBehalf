@@ -95,17 +95,28 @@ def accept_rescue(resolved: dict, service_authority: str | None) -> tuple[bool, 
     return False, f"authority mismatch: service={want[:34]!r} resolved={got[:34]!r}"
 
 
-def _clamp_resolve_step(args: Any, doc_names: list[str]) -> tuple[dict | None, str | None]:
-    if not isinstance(args, dict):
-        return None, "resolve_document args is not an object"
-    idx = args.get("doc_index")
+def step_field(raw: dict, name: str) -> Any:
+    """Read a plan-step argument from either the flat or the nested `args` shape.
+
+    The schema sent to the model is flat (strict json_schema cannot express an open `args` object).
+    The nested form is still accepted so a model that emits it, or an older recorded plan, is not
+    discarded over shape alone.
+    """
+    if name in raw:
+        return raw.get(name)
+    args = raw.get("args")
+    return args.get(name) if isinstance(args, dict) else None
+
+
+def _clamp_resolve_step(raw: dict, doc_names: list[str]) -> tuple[dict | None, str | None]:
+    idx = step_field(raw, "doc_index")
     if not isinstance(idx, int) or isinstance(idx, bool):
         return None, f"doc_index missing or not an integer: {idx!r}"
     if not (0 <= idx < len(doc_names)):
         return None, f"doc_index {idx} out of range (record has {len(doc_names)} documents)"
 
     display = doc_names[idx]                      # ALWAYS the record's wording
-    alias = args.get("alias")
+    alias = step_field(raw, "alias")
     alias = str(alias).strip() if isinstance(alias, str) and alias.strip() else None
     return {
         "tool": "resolve_document",
@@ -146,10 +157,9 @@ def compile_plan(plan: Any, record: dict, *, query: str = "") -> tuple[list[dict
         if tool not in ALLOWED_TOOLS:
             rejections.append(f"tool not permitted: {tool!r}")
             continue
-        args = raw.get("args")
 
         if tool == "resolve_document":
-            step, why = _clamp_resolve_step(args, doc_names)
+            step, why = _clamp_resolve_step(raw, doc_names)
             if step is None:
                 rejections.append(why or "invalid resolve_document step")
                 continue
@@ -161,15 +171,16 @@ def compile_plan(plan: Any, record: dict, *, query: str = "") -> tuple[list[dict
 
         elif tool == "check_freshness":
             # The target is never the model's choice.
-            if isinstance(args, dict) and args.get("post_id") not in (None, post_id):
+            asked = step_field(raw, "post_id")
+            if asked not in (None, post_id):
                 rejections.append(
-                    f"check_freshness post_id {args.get('post_id')!r} overridden with the "
+                    f"check_freshness post_id {asked!r} overridden with the "
                     f"retrieved record's {post_id!r}")
             if post_id is not None:
                 steps.append({"tool": "check_freshness", "post_id": post_id})
 
         elif tool == "live_service_lookup":
-            q = args.get("query") if isinstance(args, dict) else None
+            q = step_field(raw, "query")
             steps.append({"tool": "live_service_lookup",
                           "query": str(q).strip() if isinstance(q, str) and q.strip() else query})
 

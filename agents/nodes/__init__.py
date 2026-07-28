@@ -9,11 +9,11 @@ from agents.nodes.compose import (
     validate_schema,
 )
 from agents.nodes.intake import classify_intent, detect_language, validate_input
-from agents.nodes.research import research
+from agents.nodes.research import plan_research, research
 from agents.nodes.retrieve import retrieve
 
 __all__ = [
     "detect_language", "validate_input", "classify_intent",
-    "retrieve", "research", "compose", "validate_schema", "respond",
+    "retrieve", "plan_research", "research", "compose", "validate_schema", "respond",
     "respond_invalid", "respond_not_found", "respond_clarify", "respond_error",
 ]
