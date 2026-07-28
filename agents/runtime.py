@@ -39,7 +39,12 @@ def get_adapter_or_none():
         from groq import Groq
         from agents.adapters import get_adapter
         model_id = os.environ.get("MODEL_ID", "openai/gpt-oss-120b")
-        return get_adapter(model_id, Groq(api_key=key))
+        # max_retries=0 is what makes the adapters' per-request `timeout` an actual wall-clock
+        # bound. The SDK default of 2 retries re-issues a timed-out or 429'd call with exponential
+        # backoff, so a 6 s timeout was really taking 20-35 s — measured 18.6 s and 34.0 s on the
+        # demo queries once the free tier started rate-limiting. Every model call here has a
+        # deterministic fallback, so failing fast costs a plainer sentence; retrying costs the demo.
+        return get_adapter(model_id, Groq(api_key=key, max_retries=0))
     except Exception:  # noqa: BLE001 — a bad key must degrade to fixture mode, not crash the UI
         return None
 

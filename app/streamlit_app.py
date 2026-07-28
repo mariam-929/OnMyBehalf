@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -26,6 +27,14 @@ import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+
+# Load .env BEFORE anything reads GROQ_API_KEY. Without this the UI silently ran in fixture mode —
+# no model in the loop, `reasoning` falling back to the deterministic string — while the sidebar
+# still captioned MODEL_ID's default. The eval harness loads .env, so the demo and the measured
+# numbers came from differently-wired graphs. Keep this above the `agents.*` imports.
+from dotenv import load_dotenv  # noqa: E402
+
+load_dotenv(ROOT / ".env")
 
 OFFLINE = "--offline" in sys.argv
 
@@ -89,7 +98,17 @@ with st.sidebar:
     st.metric("Services indexed", meta["services"])
     st.metric("Hand-verified core", meta["core"])
     st.caption(f"Corpus snapshot: **{meta['snapshot']}**")
-    st.caption(f"Model: `{__import__('os').environ.get('MODEL_ID', 'openai/gpt-oss-120b')}`")
+    # Report the model only when one is actually wired in. Captioning MODEL_ID's default while the
+    # graph ran in fixture mode put a claim on screen that the run did not support.
+    from agents.runtime import get_adapter_or_none  # local: keeps module import cheap, as elsewhere
+
+    if OFFLINE:
+        st.caption("Model: **offline** — external calls disabled")
+    elif get_adapter_or_none() is not None:
+        st.caption(f"Model: `{os.environ.get('MODEL_ID', 'openai/gpt-oss-120b')}`")
+    else:
+        st.caption("Model: **none — fixture mode** (no `GROQ_API_KEY`); "
+                   "reasoning is deterministic, not model-written")
     st.caption(f"Retrieval θ: {'calibrated' if meta['calibrated'] else '**uncalibrated**'}")
     st.divider()
     st.caption("**Coverage is partial by source.** Only 3 of Lebanon's 22 ministries have "

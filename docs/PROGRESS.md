@@ -35,7 +35,11 @@ created.
 2. **Launch the UI with the `-m` form**, never bare `streamlit run` — `streamlit` is not on the
    system PATH and `Activate.ps1` silently fails under PowerShell's execution policy. This caused
    a real "localhost refused to connect" panic. Command and full guide: **`RUN.md`**.
-3. **First query ~25 s** (encoder load), then ~1.3 s. **Warm it before any demo.**
+3. **First query ~25–30 s** (encoder load). **Warm it before any demo.** Warm full-answer queries
+   are **~5.5–10 s**, NOT 1.3 s — measured 2026-07-28 over 5 spaced runs (p50 7.3 s, max 10.1 s).
+   The `p50 1.26 s` in the headline table is the median across the whole 22-case eval mix, which
+   includes sub-second adversarial refusals and abstentions; it is **not** the cost of one answered
+   service query. **Budget ~8 s per demo question when pacing the script.**
 4. **`data/` is gitignored.** A fresh clone has NO corpus and NO index. Rebuild:
    `enumerate.py` → `fetch_service_directory.py` → `indexer.py`.
 5. **Encoder is LaBSE, not BGE-M3** (BGE-M3 stalled at ~1.2 GB of 2.3 GB). LaBSE is the code
@@ -101,7 +105,7 @@ flattered the numbers twice already. Report 5 honestly.
 |---|---|---|
 | Eval failure rate | **36.4%** (8/22 scored) | `tests/eval_report.json` |
 | Hallucinated documents | **0** | ibid — **never quote bare, see below** |
-| Latency | **p50 1.26 s**, mean 6.7 s, max 33.4 s (first case = cold load) | ibid |
+| Latency | **p50 1.26 s**, mean 6.7 s, max 33.4 s (first case = cold load) — ⚠ p50 is across the whole 22-case mix incl. sub-second refusals; **one answered service query is ~5.5–10 s warm** | ibid |
 | Adversarial | **6/6** | ibid |
 | Retrieval top-1 (holdout) | 88% (7/8), CI 53–98% | `check_g4.py` |
 | Extraction recall / precision | 90% / 81% | `check_g2.py` |
@@ -314,9 +318,45 @@ unless a member picks one up.
 | 2026-07-25 | **Corpus generated (193 records); G2 reframed + `check_g2.py`; G2 integrity AUTO PASS** | Ran the ingester for real → 193 `data/corpus/*.json` (180 complete, 0 overwrite). G2 no longer a page-crawl spike (pages empty) — now extraction-correctness: `check_g2.py` integrity PASS, recall-vs-gold PENDING human. `data/spike_gold.json` pre-filled (8 svcs) for Maria/Ghina to verify. VERIFICATION G2 updated to ajax reality. |
 | 2026-07-25 | **Core-40 candidates drafted from the real corpus** → `report/evidence/core40_candidates.md` | 43 civil-registry services exist (بطاقة هوية 9 docs, تسجيل ولادة, personal-status set) + 52 interior/27 culture/101 agriculture complete. Grounds the Maria/Ghina rebuild (verify, not invent). Passport/license confirmed absent across all post types. |
 | 2026-07-27 | **Splitter fixed for the 2 mechanical failure classes** (headings + Roman-numeral case headers) | `is_heading()` now scans every line (colon optional, 30-char cap so the real document «المستندات المشار إليها في البنود…» survives). Re-ingested: exactly the 4 human-flagged phantoms dropped, nothing else. **Precision 74% → 82%.** |
+| 2026-07-28 | **`load_dotenv` in `app/streamlit_app.py`; sidebar names fixture mode when no adapter is wired** | The UI was the only entry point that never loaded `.env`, so the demo ran the fixture path with no model while captioning a model — the demo and the eval measured different graphs |
+| 2026-07-28 | **`Groq(..., max_retries=0)`** | The SDK's default 2 retries re-issued timed-out/429'd calls with backoff, so the 6 s/8 s per-request timeouts allowed 18.6–34.0 s of wall clock. Every model call has a deterministic fallback, so failing fast is the cheaper failure. **Do not reintroduce retries** |
 | 2026-07-27 | **SUPERSEDES the entry above:** conjoined-document splitting **adopted** after validation — recall 80% → **90%, G2 PASSES** | The earlier judgement that recall was "mechanically capped at 80%" was **wrong**, and is corrected here. It was right that splitting on «و» *generally* is unsafe (commonest conjunction, also a bound prefix), but wrong to conclude no rule was safe. A rule firing only where «و» directly prefixes a **closed list of document head-nouns** (صورة/وثيقة/بيان/شهادة/إفادة/محضر/تقرير/طلب/نسخة/إقامة) is lexical, not semantic. **Validated before adoption, not after:** it performs exactly **11 splits corpus-wide, all 11 inspected and correct — 8 of them on services no human verified**, which is an effective holdout. Decisive case: on unverified **#11568** it separates «بيان قيد عائلي للمطلقين» from «بيان قيد عائلي لوالدي المطلقة» — which **Ghina had independently verified as two separate documents on the sibling service #11532**, so the rule reproduces a human judgement it was never fitted to. Effect: **recall 80%→90%, precision 82%→81%, 9/180 services touched, +12 documents.** Adopted now because it is cheapest before G4 indexes the corpus. Residual 4 misses are #11464 documents that live in the notes section, not `required_documents_html` — a different change, not attempted. **G2 AUTO PASS + human check complete = G2 FULLY PASSED.** |
 
 ## Findings / surprises
+
+- **2026-07-28 — THE UI NEVER LOADED `.env`, so every demo would have run with NO MODEL.**
+  `app/streamlit_app.py` never called `load_dotenv` — only `run_eval.py`, `check_g0.py` and
+  `check_g6.py` did. So `get_adapter_or_none()` found no `GROQ_API_KEY`, returned `None`, and the UI
+  silently ran the fixture path: intent by heuristic (`reason: "fixture-mode heuristic"`) and
+  `reasoning` falling back to *"Deterministic composition — no model available"* — **exactly the
+  hardcoded-reasoning behaviour the composer work removed that morning.** Meanwhile the sidebar
+  still captioned `Model: openai/gpt-oss-120b`, putting a claim on screen the run did not support.
+  The demo and the measured eval numbers therefore came from **differently-wired graphs**, which is
+  the one thing `runtime.py`'s own docstring says must never happen. **Fixed:** `load_dotenv` at the
+  top of the app, and the caption now reports fixture mode honestly when no adapter is wired.
+  Found by smoke-testing before the demo, not by reading the code.
+- **2026-07-28 — the 6 s/8 s model timeouts were NOT bounding wall clock: SDK retries were
+  multiplying them.** `Groq(api_key=key)` used the SDK default `max_retries=2`, so a timed-out or
+  429'd call was re-issued with exponential backoff. Measured on the demo queries: **18.6 s and
+  34.0 s** for calls nominally bounded at 6–8 s. **Fixed:** `max_retries=0` — every model call here
+  already has a deterministic fallback, so failing fast costs a plainer sentence while retrying
+  costs the demo. Worst case 34.0 s → **10.1 s**. The PROGRESS claim that both calls are
+  "time-bounded" is only true with this setting; **do not reintroduce retries.**
+- **2026-07-28 — Groq free-tier rate limiting hits mid-demo and degrades intent silently.** With 20 s
+  spacing, **2 of 5** runs still returned `429 Rate limit reached` on the classify call and fell back
+  to the deterministic classifier. The answer stays correct (graceful degradation working as
+  designed) but the "an LLM classifies intent" claim quietly stops being true for that run, and
+  nothing on screen says so. **Do not rapid-fire questions during the demo.**
+- **2026-07-28 — what `dense_cos` on screen actually means (NOT a third measurement error).** The
+  clean-path demo query reports `cos=1.000000`, and so does the bare title — identical to 6 d.p.,
+  as are the runner-up scores across different queries. Cause is deliberate and documented in
+  `tools/search_services.py:34-38`: `_BOILERPLATE` strips the question wrapper as an **extra
+  channel**, and lines 178-181 report the **max** cosine across both phrasings. For this query the
+  stripped form *is* the indexed title, so the max is 1.000. Their own comment records the raw query
+  at 0.483 vs the bare title at 1.000. **Consequence to be honest about in Q&A: the displayed cosine
+  is not the similarity to what the citizen typed, it is the score for a normalised rewrite** — and
+  since θ_abs = 0.55 thresholds this max-over-channels value, it is systematically higher than the
+  raw-query cosine, which makes abstention harder to trigger (consistent with abstain 1/3).
 
 - **2026-07-27 — ARABIZI IS MISROUTED AS ENGLISH (found answering Ghina's Job-C question).**
   `detect_language` (FR1) decides on Arabic-vs-Latin letter ratio, so Latin-script Arabic —
@@ -406,6 +446,32 @@ unless a member picks one up.
   assumed) — expected, not a blocker.
 
 ## Session log (newest first)
+
+- **2026-07-28 (pre-demo smoke test — two demo-breaking bugs found and fixed):** Session opened to
+  run the demo; ran preflight instead of launching blind, which is what caught both bugs.
+  **First, a stale server:** port 8501 was held by a Streamlit instance started **01:46** that day
+  under the **Microsoft-Store Python**, not the venv — it predated the 11:38 composer commit, so
+  demoing that tab would have shown the pre-composer behaviour. Killed and relaunched from the venv.
+  **Then the real one: `app/streamlit_app.py` never loaded `.env`**, so the UI ran with no
+  `GROQ_API_KEY` → no adapter → fixture-mode intent and deterministic `reasoning`, while the sidebar
+  still captioned `Model: openai/gpt-oss-120b`. The demo would have displayed precisely the
+  hardcoded reasoning that morning's work removed, and the eval numbers came from a
+  differently-wired graph. Fixed (`load_dotenv` + an honest caption that names fixture mode).
+  **Second: the 6 s/8 s timeouts were not bounding anything** — the Groq client used the SDK default
+  `max_retries=2`, so timed-out/429'd calls were retried with backoff: **measured 18.6 s and 34.0 s**
+  on queries nominally capped at 6–8 s. `max_retries=0` → worst case **10.1 s**.
+  **Latency claim corrected in this file:** "then ~1.3 s" was misleading. Measured over 5 spaced warm
+  runs: **p50 7.3 s, max 10.1 s** for a full answered service query. The eval's `p50 1.26 s` is the
+  median across the whole mix including sub-second refusals — annotated in the headline table rather
+  than deleted, since the number itself is correct for what it measures.
+  **Verified after the changes:** `check_g9.py` **5/5**, `check_g6.py` **8/8** (both external calls
+  live, freshness `unchanged`, adversarial refused), and all four RUN.md demo queries behave as
+  documented with genuinely model-written Arabic — including the horse-passport case, where the
+  model's own reasoning now states the horse service does not address the citizen's request.
+  **Investigated `cos=1.000` and cleared it** — deliberate boilerplate-stripping channel, documented
+  in the code, not a third measurement error; but the displayed cosine is a rewrite's score, not the
+  typed query's, and that needs an honest Q&A answer. **Nothing about G11 is signed off — the
+  rehearsal itself is still human-only and outstanding.**
 
 - **2026-07-29 (composer wired; merged to main; G0 closed):** Audit found the gap that mattered:
   **the LLM was used in exactly ONE node** (`classify_intent`). `compose` and `research` never
