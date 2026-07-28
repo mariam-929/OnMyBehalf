@@ -550,28 +550,28 @@ if OFFLINE:
 
 st.title("🇱🇧 OnMyBehalf")
 st.markdown(
-    "**Ask in Arabic or English.** The interface separates model-written language from facts assembled directly from the verified record."
+    "**Ask in Arabic or English.** Every document, fee and office shown comes from the official "
+    "Dawlati record — never written by the AI."
 )
 
 
-# Warm proactively and visibly. The cached function still executes only once per server.
+# Warm proactively so the one-off cost lands before the citizen asks anything. The wording stays
+# in the citizen's terms: an encoder, an index and a cache are our implementation, not their concern.
 if not st.session_state.get("retrieval_ready", False):
-    with st.status("Preparing the local retrieval index…", expanded=True) as warm_status:
-        st.write("One-time cold start: loading the sentence encoder and 193-record search index locally.")
-        st.write("No answer is being generated and no external website is being contacted during this step.")
+    with st.spinner("Getting ready — this takes a moment the first time…"):
         try:
             _warm()
-        except Exception:  # handled again on a submitted query with a structured UI error
-            status_update(warm_status, label="Local retrieval index could not be prepared",
-                          state="error")
+        except Exception:  # surfaced properly as a structured error when a question is submitted
+            warm_failed = True
         else:
             st.session_state.retrieval_ready = True
-            status_update(warm_status, label="Local retrieval index ready", state="complete",
-                          expanded=False)
+            warm_failed = False
+    if warm_failed:
+        st.error("Something went wrong while preparing the service. Please try asking anyway — "
+                 "the problem will be reported in full if it persists.")
 else:
     _warm()  # server cache makes this effectively free and protects against session-only drift
 
-st.caption("The first server start is slow; later queries reuse the cached local index.")
 render_rule()
 
 
@@ -1291,16 +1291,15 @@ def wait_stage(elapsed: float) -> int:
 
 
 def render_wait_pipeline(placeholder: Any, active: int, elapsed: float) -> None:
+    # The four steps stay on screen — the brief requires the reasoning loop to be observable — but
+    # in the citizen's words. "Envelope", "pipeline" and "fact-free orientation" are our vocabulary.
     labels = [
-        "Detecting language and validating the request",
-        "Retrieving the closest indexed service",
-        "Using cached data (live check disabled)" if OFFLINE else "Checking the live Dawlati source",
-        "Composing fact-free orientation and assembling the envelope",
+        "Reading your question",
+        "Finding the matching official service",
+        "Using saved data (live check off)" if OFFLINE else "Checking the official source is current",
+        "Writing your answer",
     ]
-    lines = [
-        "**Estimated pipeline position** — the backend returns its actual trace only when the run completes.",
-        "",
-    ]
+    lines = ["**Working on your question** — approximate progress.", ""]
     for index, label in enumerate(labels):
         if index < active:
             icon = "✅"
@@ -1330,8 +1329,8 @@ def run_with_progress(prompt: str) -> tuple[dict, dict, float]:
                     active = wait_stage(elapsed)
                     render_wait_pipeline(pipeline_box, active, elapsed)
                     progress.progress(min(0.94, (active + 0.35) / 4.0))
-                    status_update(run_status, 
-                        label=f"Agent pipeline · stage {active + 1} of 4 (estimated until trace returns)",
+                    status_update(run_status,
+                        label=f"Working on your question · step {active + 1} of 4",
                         state="running",
                     )
                     time.sleep(0.25)
@@ -1342,20 +1341,22 @@ def run_with_progress(prompt: str) -> tuple[dict, dict, float]:
             elapsed = time.time() - t0
             render_wait_pipeline(pipeline_box, 4, elapsed)
             progress.progress(1.0)
+            # Keep the DISTINCTION between a clean run, a degraded one and offline mode — that is
+            # honesty, not jargon — but say it in words a citizen can act on.
             if detect_runtime_degradation(state):
-                status_update(run_status, 
-                    label="Run completed with an explicitly reported deterministic fallback",
+                status_update(run_status,
+                    label="Answer ready — part of the service was unavailable, see the note below",
                     state="complete",
                     expanded=True,
                 )
             elif OFFLINE:
-                status_update(run_status, 
-                    label="Run completed in offline emergency mode",
+                status_update(run_status,
+                    label="Answer ready — from saved data, the official source was not checked",
                     state="complete",
                     expanded=True,
                 )
             else:
-                status_update(run_status, label="Run completed — actual trace shown below", state="complete", expanded=False)
+                status_update(run_status, label="Answer ready", state="complete", expanded=False)
 
         except Exception as exc:  # noqa: BLE001 — crashes must become a handled envelope
             elapsed = time.time() - t0
@@ -1370,8 +1371,10 @@ def run_with_progress(prompt: str) -> tuple[dict, dict, float]:
                 "output": {"stage": "ui", "detail": str(exc)[:500]},
             }
             progress.progress(1.0)
-            pipeline_box.error("The run failed and was converted to a structured error envelope.")
-            status_update(run_status, label="Run failed — handled error shown below", state="error", expanded=True)
+            pipeline_box.error("Something went wrong. The details are shown below rather than "
+                               "hidden behind a made-up answer.")
+            status_update(run_status, label="Could not complete — details below", state="error",
+                          expanded=True)
 
     return state, env, elapsed
 
