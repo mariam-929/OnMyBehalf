@@ -102,6 +102,23 @@ class IntentResult(BaseModel):
     language_advisory: Literal["ar", "en"]
 
 
+class Narration(BaseModel):
+    """The ONLY thing the composer LLM is allowed to produce.
+
+    It contains no facts. Documents, fees, URLs, freshness and confidence are assembled by code
+    from the retrieved record and never pass through the model, so the model cannot alter or
+    invent them — that is what keeps fabrication structurally impossible in the answer while
+    still letting the agent explain itself in the user's language.
+
+    `reasoning` is the brief-mandated field. Before this existed it was a hardcoded constant
+    string, identical on every answer, which is a label rather than reasoning.
+    """
+    reasoning: str = Field(description="Why this service was chosen and what the evidence shows. "
+                                       "Logged, not shown to the citizen.")
+    summary: str = Field(description="1-2 sentences answering the user's actual question, in "
+                                     "THEIR language. No numbers, fees or document names.")
+
+
 class PlanStep(BaseModel):
     tool: Literal["resolve_document", "check_freshness", "live_service_lookup"]
     args: dict
@@ -181,6 +198,9 @@ class AnswerOut(BaseModel):
     time_estimate: TimeEstimate
     caveats: list[str] = Field(default_factory=list)
     conditional_flags: list[ConditionalFlag] = Field(default_factory=list)
+    # Model-written, fact-free (see Narration). None when running without a key or offline —
+    # the answer is still complete without it, because every fact lives in the fields above.
+    summary: Optional[str] = None
 
 
 class ClarifyOut(BaseModel):

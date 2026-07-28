@@ -67,7 +67,12 @@ def build_graph(adapter=None, search_fn=None, tools=None, curated_core=None):
                lambda s: classify_intent(s, adapter=adapter, system_prompt=intent_prompt))
     g.add_node("retrieve", lambda s: retrieve(s, search_fn=search_fn))
     g.add_node("research", lambda s: research(s, tools=tools))
-    g.add_node("compose", lambda s: compose(s, curated_core=curated_core))
+    # The composer model writes ONLY `reasoning` + `summary` (see Narration). Facts never round
+    # trip through it. Before this was wired, `reasoning` — a field the brief mandates — was a
+    # hardcoded constant identical on every answer.
+    composer_prompt = load_prompt("composer")
+    g.add_node("compose", lambda s: compose(s, curated_core=curated_core, adapter=adapter,
+                                            system_prompt=composer_prompt))
     g.add_node("validate_schema", validate_schema)
     g.add_node("respond", respond)
     # terminal branches

@@ -19,6 +19,12 @@ _LATIN = re.compile(r"[A-Za-z]")
 MIN_LEN = 3
 MAX_LEN = 500
 
+# Bounds the classification wait. This call runs for every query, so its worst case is the
+# system's worst case — one eval run reached 30 s end-to-end on the free tier. Timing out here is
+# safe by construction: `validate_input` has already refused adversarial input deterministically
+# before any model call, so the fallback costs routing nuance, not safety.
+INTENT_TIMEOUT_S = 6.0
+
 # Adversarial patterns -> invalid_request (SCOPE §11). Deterministic, pre-model.
 _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("bribery", re.compile(r"\b(bribe|bribing|backhander|kickback)\b|رشوة|رشوه|بقشيش|واسطة",
@@ -103,6 +109,17 @@ def classify_intent(state: dict, adapter=None, system_prompt: str = "") -> dict:
         return with_trace(state, "classify_intent", {"intent": result.model_dump()},
                           intent=intent, mode="fixture")
 
-    result, meta = adapter.complete(system_prompt, q, IntentResult)
+    try:
+        result, meta = adapter.complete(system_prompt, q, IntentResult,
+                                        timeout=INTENT_TIMEOUT_S)
+    except Exception as exc:  # noqa: BLE001
+        # Classification is on the critical path for EVERY query, including refusals, so an
+        # unbounded or failed call would stall the whole system. Falling back to the fixture
+        # heuristic degrades routing quality, never safety: `validate_input` has already run
+        # deterministically, so adversarial input is refused whether or not this call succeeds.
+        result = IntentResult(intent="service_query", reason=f"model unavailable: {exc!s:.60}",
+                              language_advisory=state.get("language", "ar"))
+        return with_trace(state, "classify_intent", {"intent": result.model_dump()},
+                          intent=result.intent, mode="fallback", error=str(exc)[:80])
     return with_trace(state, "classify_intent", {"intent": result.model_dump()},
                       intent=result.intent, mode="model", latency_s=meta.get("latency_s"))

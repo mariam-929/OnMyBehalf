@@ -13,6 +13,7 @@ service, and averaging would punish long services for having many chunks.
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from pathlib import Path
 
 from agents.models import RetrievedCandidate
@@ -119,10 +120,24 @@ def bm25_ranked(query: str, k: int) -> list[int]:
     return [_bm25_ids[i] for i in order[:k] if scores[i] > 0]
 
 
+@lru_cache(maxsize=512)
+def _encode(query: str) -> tuple[float, ...]:
+    """Cache query embeddings — the same string is encoded many times per answer.
+
+    Measured: one answer triggered 10-20 encoder calls. `answer()` runs the graph twice (identify,
+    then compose with the record attached) so the user's query is encoded twice, and
+    `resolve_document` runs a full retrieval for EVERY required document — five documents means
+    five more, each of which may also encode a boilerplate-stripped variant. Encoding is the
+    dominant cost per answer; caching it is free correctness-wise because the encoder is
+    deterministic for a given string.
+    """
+    return tuple(get_model().encode([query], normalize_embeddings=True)[0].tolist())
+
+
 def dense_ranked(query: str, k: int) -> tuple[list[int], dict[int, float]]:
     """Returns (service ids best-first, best cosine per service)."""
     coll = _get_collection()
-    vec = get_model().encode([query], normalize_embeddings=True).tolist()
+    vec = [list(_encode(query))]
     # over-fetch: k chunks can collapse into far fewer distinct services
     res = coll.query(query_embeddings=vec, n_results=min(k * 4, 50),
                      include=["metadatas", "distances"])

@@ -114,6 +114,14 @@ def render_answer(out: dict) -> None:
     if svc.get("source_url"):
         st.markdown(f"[↗ Official source on Dawlati]({svc['source_url']})")
 
+    # Model-written and deliberately fact-free — every number, document and office below this
+    # line is rendered from the verified record, never from the model.
+    if out.get("summary"):
+        st.markdown(
+            f'<div style="border-left:3px solid #4c8bf5;padding:0.5rem 0.9rem;margin:0.6rem 0;'
+            f'background:rgba(76,139,245,0.06)">{rtl(out["summary"])}</div>',
+            unsafe_allow_html=True)
+
     for caveat in out.get("caveats") or []:
         st.warning(caveat, icon="⚠️")
 

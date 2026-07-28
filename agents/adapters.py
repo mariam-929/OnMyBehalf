@@ -52,12 +52,20 @@ class BaseAdapter:
 class GptOssAdapter(BaseAdapter):
     model_id = "openai/gpt-oss-120b"
 
-    def complete(self, system, user, schema_model, reasoning_effort="medium"):
+    def complete(self, system, user, schema_model, reasoning_effort="medium", timeout=None):
+        """`timeout` bounds the wait in SECONDS; None uses the SDK default.
+
+        Measured on the free tier: identical calls ranged 0.5 s to 12.8 s, and one eval case hit
+        40 s end-to-end. Latency variance is the provider's, not ours, but an unbounded wait is
+        ours — a 40 s pause in front of an audience is worse than a plainer sentence, and every
+        caller here has a working fallback.
+        """
         t0 = time.time()
         resp = self.client.chat.completions.with_raw_response.create(
             model=self.model_id,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
             reasoning_effort=reasoning_effort,
+            timeout=timeout,
             response_format={
                 "type": "json_schema",
                 "json_schema": {"name": schema_model.__name__, "strict": True,
@@ -75,16 +83,22 @@ class GptOssAdapter(BaseAdapter):
 class Qwen36Adapter(BaseAdapter):
     model_id = "qwen/qwen3.6-27b"
 
-    def complete(self, system, user, schema_model, reasoning_effort="default"):
+    def complete(self, system, user, schema_model, reasoning_effort="default", timeout=None):
+        # `timeout` must be accepted here even though this adapter is not the bakeoff winner:
+        # callers pass it by keyword, so an adapter missing it would raise TypeError the moment
+        # anyone switched MODEL_ID to Qwen. The two adapters must stay interface-compatible.
+        # Note the budget covers BOTH attempts, since the repair retry is part of one logical call.
         t0 = time.time()
         # No strict schema -> ask for a JSON object, then validate + one repair retry.
         sys_full = system + "\n\nRespond ONLY with a single JSON object matching the required schema."
         for attempt in range(2):
+            remaining = None if timeout is None else max(0.5, timeout - (time.time() - t0))
             resp = self.client.chat.completions.with_raw_response.create(
                 model=self.model_id,
                 messages=[{"role": "system", "content": sys_full}, {"role": "user", "content": user}],
                 reasoning_effort=reasoning_effort,
                 reasoning_format="parsed",
+                timeout=remaining,
                 response_format={"type": "json_object"},
             )
             headers = resp.headers

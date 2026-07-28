@@ -101,7 +101,26 @@ an environment variable so the comparison remains a one-line change.
 asymmetry is deliberate: a wrong service answer is visible and recoverable, but a wrong *"go here
 to obtain this document"* sends a citizen to the wrong ministry.
 
-### 3.4 Confidence and human review
+### 3.4 What the model writes, and what it is never allowed to touch
+
+The LLM contributes **language only**. It emits exactly two fields — `reasoning` (logged) and a
+1–2 sentence `summary` for the citizen — and never sees or reproduces a document name, a fee, an
+office, a URL or a duration. Those are assembled by code directly from the retrieved record.
+
+The split is deliberate and it is what lets both claims hold at once: the answer reads as an
+agent explaining itself, **and** a fabricated document is structurally impossible in it, because
+the facts never round-trip through the model. Re-running the full eval after wiring the composer
+confirmed it — prose became model-written and **hallucinations stayed at 0**.
+
+Both model calls are time-bounded (6 s classification, 8 s narration) and both degrade to
+deterministic behaviour on timeout. Free-tier latency is erratic — identical calls measured
+between 0.5 s and 12.8 s — and an unbounded wait in front of an audience is a worse failure than
+a plainer sentence. Bounding them moved p50 from 2.55 s to 1.26 s.
+
+Before this was wired, `reasoning` — a field the brief mandates — was a hardcoded constant string,
+identical on every answer.
+
+### 3.5 Confidence and human review
 
 `confidence` is an **evidence-quality heuristic, not a calibrated probability**, and is disclosed
 as such in the answer and here. It starts at 0.9 for a curated-core service or 0.5 otherwise, and
@@ -173,7 +192,7 @@ their own procedure clusters — the only queries in this project not authored b
 |---|---|
 | **Failure rate** | **36.4%** (8 of 22 scored) |
 | **Hallucinated documents** | **0** |
-| **Latency** | mean 4.96 s · **p50 1.56 s** · max 28.1 s (cold encoder load) |
+| **Latency** | mean 6.7 s · **p50 1.26 s** · max 33.4 s (first case, cold encoder load) |
 | Adversarial | **6/6** |
 | Normal | 3/5 |
 | Edge | 5/11 |

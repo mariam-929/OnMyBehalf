@@ -54,8 +54,81 @@ def compute_confidence(*, is_core: bool, freshness_status: str, any_unresolved: 
     return max(score, CONFIDENCE_FLOOR), reasons
 
 
-def compose(state: dict, curated_core: set[int] | None = None) -> dict:
-    """Build the AnswerOut + Envelope for the happy path."""
+FALLBACK_REASONING = ("Matched the query to a Dawlati service and assembled its published "
+                      "requirements. (Deterministic composition — no model available.)")
+
+# Hard cap on the narration wait. The free tier's latency is erratic (0.5-12.8 s for identical
+# calls, one eval case reaching 40 s end-to-end); the variance is the provider's, but an
+# unbounded wait would be ours. Past this we fall back to deterministic prose, which costs the
+# answer nothing factual because every fact is assembled from the record either way. A plainer
+# sentence beats a 40-second silence in front of an audience.
+NARRATION_TIMEOUT_S = 8.0
+
+
+def _evidence_brief(record: dict, documents: list, freshness, flags: list) -> str:
+    """What the composer model is shown. Deliberately a SUMMARY, not the raw record.
+
+    The model is given counts and names but is never asked to reproduce them, because anything it
+    is asked to echo it can also corrupt. Keeping the evidence brief short also keeps us inside
+    the 8K TPM free-tier budget on every call.
+    """
+    sec = record.get("sections") or {}
+    resolved = sum(1 for d in documents
+                   if (d.get("resolution") if isinstance(d, dict) else d.resolution) != "unresolved")
+    lines = [
+        f"service: {record.get('title_ar','')}",
+        f"authority: {sec.get('authority') or 'not published'}",
+        f"required documents: {len(documents)} listed, {resolved} resolved to a source",
+        f"fees: {'published' if sec.get('fees') else 'NOT published'}",
+        f"where to apply: {'published' if sec.get('where_to_apply') else 'NOT published'}",
+        f"record status: {record.get('record_status','incomplete')}",
+        f"source freshness: {freshness.status}",
+    ]
+    if flags:
+        lines.append("conditional structure detected: "
+                     + ", ".join(sorted({f.kind for f in flags}))
+                     + " (requirements differ by applicant case)")
+    return "\n".join(lines)
+
+
+def narrate(state: dict, record: dict, documents: list, freshness, flags: list,
+            adapter=None, system_prompt: str = ""):
+    """Ask the model for `reasoning` + `summary` ONLY. Returns (reasoning, summary, meta).
+
+    Falls back to a deterministic string whenever the model is absent or fails. That fallback is
+    what makes `--offline` and the no-API-key path work, and it means a provider outage degrades
+    the answer's prose rather than the answer's facts.
+    """
+    if adapter is None:
+        return FALLBACK_REASONING, None, {"mode": "deterministic"}
+
+    lang = state.get("language", "ar")
+    user = (f"Citizen's question ({lang}): {state.get('query','')}\n\n"
+            f"EVIDENCE (this is all you may rely on):\n"
+            f"{_evidence_brief(record, documents, freshness, flags)}\n\n"
+            f"Write `reasoning` (English, for the log) and `summary` "
+            f"(in {'Arabic' if lang == 'ar' else 'English'}, 1-2 sentences, addressed to the "
+            f"citizen). Do NOT list documents, fees, amounts or URLs — those are rendered "
+            f"separately from verified data. If fees or details are not published, say the "
+            f"official source does not state them.")
+    try:
+        from agents.models import Narration
+        result, meta = adapter.complete(system_prompt, user, Narration,
+                                        timeout=NARRATION_TIMEOUT_S)
+        return result.reasoning, result.summary, {"mode": "model", **meta}
+    except Exception as exc:  # noqa: BLE001 — prose is never worth failing an answer over
+        return FALLBACK_REASONING, None, {"mode": "fallback", "error": str(exc)[:120]}
+
+
+def compose(state: dict, curated_core: set[int] | None = None, adapter=None,
+            system_prompt: str = "") -> dict:
+    """Build the AnswerOut + Envelope for the happy path.
+
+    The model contributes LANGUAGE only (`reasoning`, `summary`). Every factual field —
+    documents, fees, authority, URL, freshness, confidence — is assembled here from the retrieved
+    record and never round-trips through the model. That split is why the answer cannot contain a
+    fabricated document even when the prose is model-written.
+    """
     record = state.get("service_record") or {}
     sections = record.get("sections") or {}
     language = state.get("language", "ar")
@@ -101,6 +174,9 @@ def compose(state: dict, curated_core: set[int] | None = None) -> dict:
     if incomplete:
         review_reasons.append("incomplete_record")
 
+    reasoning, summary, narr_meta = narrate(state, record, documents, freshness, flags,
+                                            adapter=adapter, system_prompt=system_prompt)
+
     answer = AnswerOut(
         service=ServiceOut(
             name_ar=record.get("title_ar", ""),
@@ -116,11 +192,11 @@ def compose(state: dict, curated_core: set[int] | None = None) -> dict:
         time_estimate=state.get("time_estimate") or TimeEstimate(computable=False),
         caveats=caveats,
         conditional_flags=flags,
+        summary=summary,
     )
     env = Envelope(
         action="answer",
-        reasoning=state.get("reasoning", "Matched the query to a Dawlati service and assembled "
-                                          "its published requirements."),
+        reasoning=reasoning,
         confidence=confidence,
         language=language,
         needs_human_review=bool(review_reasons),
@@ -130,7 +206,9 @@ def compose(state: dict, curated_core: set[int] | None = None) -> dict:
     return with_trace(state, "compose", {"final_response": env.model_dump()},
                       confidence=round(confidence, 3), confidence_reasons=reasons,
                       conditional_flags=[f.kind for f in flags],
-                      needs_human_review=bool(review_reasons))
+                      needs_human_review=bool(review_reasons),
+                      narration=narr_meta.get("mode"),
+                      narration_latency_s=narr_meta.get("latency_s"))
 
 
 # ---------------------------------------------------------------- terminal branches
