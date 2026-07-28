@@ -126,6 +126,86 @@ st.caption("Ask about a Lebanese government procedure — in Arabic or English."
 
 
 # ---------------------------------------------------------------- rendering
+# What each conditional KIND means for the citizen reading the list below it. The source encodes
+# branching logic that `required_documents: list[str]` flattens away (REPORT §5), so the flags are
+# the only thing on screen telling a reader the list is not a plain "bring all of these".
+_FLAG_LABEL = {
+    "branch": ("Depends on who you are",
+               "The source lists different documents for different applicants. "
+               "The list below merges every case — confirm which one is yours."),
+    "either_or": ("Alternatives, not extras",
+                  "Some items are «أو» (or) alternatives. You may not need all of them."),
+    "precondition": ("Eligibility condition",
+                     "This procedure has a condition that must hold before you apply."),
+    "recency": ("Document must be recent",
+                "At least one document must be issued within a time window."),
+}
+
+# `aggregate()` converts every total to DAYS (weeks x7, months x30) and business/calendar days pass
+# through 1:1, so a total is only ever expressible in days. Labelling it with the breakdown's raw
+# unit read "14 weeks" for 2 weeks — a 7x overstatement of an official processing time.
+_TOTAL_UNIT_WORD = {"business_days": "business days"}  # everything else aggregates to calendar days
+
+
+def render_conditional_flags(flags: list) -> None:
+    """The project's headline structural finding, shown rather than buried in caveat prose.
+
+    Placed ABOVE the document list on purpose: it changes how the list should be read. `either_or`
+    keys on «أو», which is ubiquitous in Arabic, so it is marked heuristic — the same reason it
+    never escalates to human review on its own.
+    """
+    if not flags:
+        return
+    strong = sum(1 for f in flags if f.get("high_confidence"))
+    st.markdown(f"**⚠️ This service has conditional requirements** "
+                f"({len(flags)} detected, {strong} high-confidence)")
+    st.caption("Detected automatically in the source text. A flat checklist cannot express these, "
+               "so we flag them instead of silently flattening them.")
+    for f in flags:
+        kind = f.get("kind", "")
+        label, explain = _FLAG_LABEL.get(kind, (kind or "conditional", ""))
+        weak = "" if f.get("high_confidence") else " · heuristic, may be a false positive"
+        st.markdown(
+            f'<div style="border-left:3px solid #d68000;padding:0.35rem 0.8rem;margin:0.35rem 0;'
+            f'background:rgba(214,128,0,0.07)">'
+            f'<strong>{esc(label)}</strong>'
+            f'<span style="opacity:0.7;font-size:0.85rem"> — {esc(explain)}{esc(weak)}</span>'
+            f'</div>', unsafe_allow_html=True)
+        if f.get("evidence"):
+            st.markdown(
+                f'<div style="margin:-0.2rem 0 0.6rem 1.1rem;opacity:0.75;font-size:0.9rem">'
+                f'↳ source: {rtl(f["evidence"], size="0.9rem")}</div>', unsafe_allow_html=True)
+
+
+def format_time_estimate(te: dict) -> tuple[str, str]:
+    """(headline, caption) for the processing-time tile.
+
+    Returns an honest refusal rather than a number whenever the estimate is not computable — which
+    is currently ALWAYS, because no node populates `state["time_estimate"]` and Dawlati does not
+    publish processing durations. Showing "not published" keeps a promise the pitch makes; inventing
+    a plausible number would break the one rule this system is built on.
+    """
+    if not te:
+        return "— not published —", ""
+    if not te.get("computable"):
+        parts = te.get("breakdown") or []
+        if parts:
+            return ("— total not computable —",
+                    f"{len(parts)} step(s) published, but their units cannot be summed")
+        return "— not published —", "the source states no processing time"
+
+    raw_unit = ""
+    if te.get("breakdown"):
+        raw_unit = (te["breakdown"][0].get("duration") or {}).get("unit", "")
+    unit = _TOTAL_UNIT_WORD.get(raw_unit, "calendar days")
+    lo, hi = te.get("total_min_days"), te.get("total_max_days")
+    span = f"{lo:g}" if hi in (None, lo) else f"{lo:g}–{hi:g}"
+    prefix = "at least " if te.get("is_lower_bound") else ""
+    caption = ("assembled from steps where at least one duration was missing"
+               if te.get("is_lower_bound") else "sum of the published steps")
+    return f"{prefix}{span} {unit}".strip(), caption
+
+
 def render_answer(out: dict) -> None:
     svc = out.get("service") or {}
     st.markdown(rtl(svc.get("name_ar") or "", size="1.35rem", weight="700"),
@@ -144,6 +224,9 @@ def render_answer(out: dict) -> None:
     for caveat in out.get("caveats") or []:
         st.warning(caveat, icon="⚠️")
 
+    # Before the list, not after: these flags change how the list must be read.
+    render_conditional_flags(out.get("conditional_flags") or [])
+
     docs = out.get("required_documents") or []
     st.subheader(f"Required documents ({len(docs)})")
     if not docs:
@@ -158,15 +241,23 @@ def render_answer(out: dict) -> None:
                 f'<div style="margin:-0.4rem 0 0.6rem 1.2rem;opacity:0.75">'
                 f'↳ {rtl(where)}</div>', unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.markdown("**Fees**")
+        # None means the source PUBLISHES no fee, which is not the same as the service being free —
+        # the agent was specifically criticised for collapsing those two.
         st.markdown(rtl(svc.get("fees") or "— not published —"), unsafe_allow_html=True)
     with c2:
         st.markdown("**Where to apply**")
         st.markdown(rtl(svc.get("where_to_apply") or "— not published —"),
                     unsafe_allow_html=True)
     with c3:
+        st.markdown("**Processing time**")
+        headline, sub = format_time_estimate(out.get("time_estimate") or {})
+        st.markdown(rtl(headline), unsafe_allow_html=True)
+        if sub:
+            st.caption(sub)
+    with c4:
         st.markdown("**Source freshness**")
         f = (svc.get("freshness") or {}).get("status", "unverified")
         st.markdown({"unchanged": "✅ unchanged since our snapshot",
