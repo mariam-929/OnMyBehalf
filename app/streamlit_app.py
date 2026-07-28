@@ -60,6 +60,8 @@ st.markdown(
         --omb-muted: #586474;
         --omb-line: #d9e0e7;
         --omb-soft: #f5f7f9;
+        /* One source of truth for the chat field. Padding and typed text both inherit it. */
+        --omb-field: #f5f7f9;
         --omb-blue: #155eef;
         --omb-green: #067647;
         --omb-amber: #b54708;
@@ -204,24 +206,36 @@ st.markdown(
       /* The chat input is the one widget the citizen TYPES into, so its contrast cannot be left to
          the ambient theme. Set the box and the glyphs together, and set -webkit-text-fill-color as
          well: on WebKit that wins over `color` on a textarea, which is how typed text ended up
-         invisible. .streamlit/config.toml pins the theme; this makes the input independent of it. */
-      [data-testid="stChatInput"],
-      [data-testid="stChatInputContainer"],
-      [data-testid="stBottomBlockContainer"] {
-        background: #ffffff !important;
+         invisible. .streamlit/config.toml pins the theme; this makes the input independent of it.
+
+         The FIELD COLOUR IS DECLARED ONCE, on the outer wrapper, and every descendant is forced
+         transparent. Streamlit nests several divs between the wrapper and the textarea, so colouring
+         "the input" and "the textarea" separately left the padding one shade and the typed text
+         another. Inheriting from a single declaration makes a mismatch impossible rather than
+         merely fixed — there is no second value to drift. */
+      [data-testid="stBottomBlockContainer"],
+      [data-testid="stBottom"] {
+        background: #fbfcfd !important;   /* page background, so the field reads as a field */
       }
 
       [data-testid="stChatInput"],
       [data-testid="stChatInputContainer"] {
+        background: var(--omb-field) !important;
         border: 1px solid var(--omb-line) !important;
         border-radius: 12px !important;
+      }
+
+      /* Every nested wrapper, the textarea, and the send button inherit the one colour above. */
+      [data-testid="stChatInput"] *,
+      [data-testid="stChatInputContainer"] * {
+        background: transparent !important;
+        background-color: transparent !important;
       }
 
       [data-testid="stChatInput"] textarea,
       [data-testid="stChatInputContainer"] textarea {
         color: var(--omb-ink) !important;
         -webkit-text-fill-color: var(--omb-ink) !important;
-        background: #ffffff !important;
         caret-color: var(--omb-blue) !important;
         font-size: 1.05rem !important;
       }
