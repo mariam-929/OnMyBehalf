@@ -7,27 +7,28 @@
 > `C:\Users\Mariam\venvs\OnMyBehalf\Scripts\python.exe` (venv is OUTSIDE OneDrive); Groq key is in
 > `.env` (gitignored). Repo: github.com/mariam-929/OnMyBehalf.
 >
-> **As of 2026-07-28 (build day 4 done) — THE SYSTEM WORKS END TO END.** UI → agent → live Dawlati
-> REST → cited answer. **PASSED: G1, G1b, G2, G5, G6, G9.** Partial: G3 (core-44 + gold done,
-> lookup table missing), G4 (2/4, left failing on purpose), G7, G8 (run: 36.4% failure, 0
-> hallucinations), G10 (REPORT.md written). **Not started: G11 demo — human-only and the top
-> priority.** Branch `build-graph-g5`, pushed. Full detail + all gotchas in `docs/PROGRESS.md` →
-> CURRENT STATE.
+> **As of 2026-07-29 — THE SYSTEM WORKS END TO END.** UI -> agent -> live Dawlati REST -> cited
+> answer. On **`main`**, synced. **PASSED: G0, G1, G1b, G2, G5, G6, G9.** Partial: G3, G4 (2/4,
+> failing on purpose), G7, G8, G10. **Not started: G11 demo — human-only and the top priority.**
+> Full detail + every gotcha: `docs/PROGRESS.md` -> CURRENT STATE.
 >
-> **Four traps that cost real time this week:**
-> 1. **VPN OFF** for dawlati.gov.lb — otherwise every answer silently reads `freshness: unverified`.
-> 2. Launch the UI as `python.exe -m streamlit run …` — bare `streamlit run` fails because it is
->    not on PATH, which reads as "localhost refused to connect".
-> 3. `data/` is gitignored — a fresh clone has no corpus and no index until you rebuild.
-> 4. Encoder is **LaBSE** (BGE-M3 never downloaded). Rebuild the index if you change it.
+> **The architecture rule that governs everything: the model writes LANGUAGE, code owns FACTS.**
+> The composer LLM emits only `reasoning` + `summary`; documents, fees, offices and URLs are
+> assembled from the retrieved record and never pass through it. That is why "0 hallucinations"
+> holds. **If you let the model emit factual fields, that guarantee dies.**
 >
-> **Team: Ali and Gaby are out** (2026-07-28); their streams were absorbed. Maria and Ghina
-> delivered in full — their verification is the backbone of G2/G3. The technical gates therefore
-> have **no independent reviewer**; those sign-offs are recorded as producer self-checks, never
-> filled in.
+> **Traps that cost real time:** (1) **VPN OFF** for dawlati.gov.lb or every answer silently reads
+> `freshness: unverified`; (2) launch the UI via `python.exe -m streamlit run` — bare
+> `streamlit run` is not on PATH and reads as "localhost refused to connect" (see `RUN.md`);
+> (3) `data/` is gitignored, so a fresh clone needs the three rebuild commands; (4) encoder is
+> **LaBSE** (BGE-M3 never downloaded) — rebuild the index if you change it; (5) don't remove the
+> 6 s/8 s model timeouts, they stop the demo stalling for 40 s.
 >
-> **Orientation:** `VERIFY.md` (how to check the work) → `RUN.md` (launch + verified demo prompts)
-> → `report/REPORT.md` → `prompts/ITERATION_LOG.md`.
+> **Team: Ali and Gaby are out** (2026-07-28). Maria and Ghina delivered in full — their
+> verification is the backbone of G2/G3. The technical gates therefore have **no independent
+> reviewer**; those sign-offs are recorded as producer self-checks, never filled in.
+>
+> **Orientation:** `VERIFY.md` -> `RUN.md` -> `report/REPORT.md` -> `prompts/ITERATION_LOG.md`.
 
 Team: Gaby, Mariam, Ali, Ghina, Maria. This repo is the single home for code + plan. Human
 teammates: start at `CONTRIBUTING.md` then `SETUP.md`. The `docs/` folder is the authoritative plan.

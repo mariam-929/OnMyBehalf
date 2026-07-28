@@ -23,72 +23,95 @@ never invent durations; IntentResult/ResearchPlan added to schema; per-doc fresh
 deterministic system step; PROGRESS stale refs fixed). Owners assigned (table below); Groq key
 created.
 
-### ▶ CURRENT STATE — read this first (2026-07-28, end of build day 4)
+### ▶ CURRENT STATE — read this first (2026-07-29)
 
-**Deadline: Wed 2026-07-29.** Branch **`build-graph-g5`**, 13 commits ahead of `main`, pushed,
-tree clean. PR not opened — decide whether to PR or merge direct given the timeline.
+**Deadline: today.** On **`main`**, synced with origin, tree clean. `build-graph-g5` was merged
+(fast-forward) — work directly on `main` now.
 
-#### The 6 things that will waste your time if you don't know them
+#### The 7 things that will waste your time if you don't know them
 
-1. **VPN OFF for anything touching dawlati.gov.lb.** Cloudflare 403s VPN IPs. Symptom is subtle:
-   answers still render but every one says `freshness: unverified`.
+1. **VPN OFF for anything touching dawlati.gov.lb.** Cloudflare 403s VPN IPs. The symptom is
+   subtle: answers still render, they just all say `freshness: unverified`.
 2. **Launch the UI with the `-m` form**, never bare `streamlit run` — `streamlit` is not on the
-   system PATH and `Activate.ps1` silently fails under PowerShell's execution policy. This
-   produced a real "localhost refused to connect" panic:
-   `& "$env:USERPROFILE\venvs\OnMyBehalf\Scripts\python.exe" -m streamlit run app/streamlit_app.py`
-   (full launch guide + verified demo prompts: `RUN.md`)
-3. **First query takes ~25 s** (encoder load), then ~1.5 s. Warm it before any demo.
+   system PATH and `Activate.ps1` silently fails under PowerShell's execution policy. This caused
+   a real "localhost refused to connect" panic. Command and full guide: **`RUN.md`**.
+3. **First query ~25 s** (encoder load), then ~1.3 s. **Warm it before any demo.**
 4. **`data/` is gitignored.** A fresh clone has NO corpus and NO index. Rebuild:
    `enumerate.py` → `fetch_service_directory.py` → `indexer.py`.
-5. **Encoder is LaBSE, not BGE-M3.** BGE-M3 stalled at ~1.2 GB of 2.3 GB AND saturated the
-   connection enough to time out our live REST calls. LaBSE is now the code default; all reported
-   numbers were measured with it. `EMBED_MODEL` overrides, but the index must be rebuilt after.
-6. **A big download in the background breaks the live tool calls.** Cost an hour of false
-   debugging when freshness read "source unreachable" while the tools worked fine standalone.
+5. **Encoder is LaBSE, not BGE-M3** (BGE-M3 stalled at ~1.2 GB of 2.3 GB). LaBSE is the code
+   default. `EMBED_MODEL` overrides it, but you must rebuild the index after changing it.
+6. **A large background download breaks the live tool calls.** Cost an hour of false debugging
+   when freshness read "source unreachable" while the tools worked fine standalone.
+7. **Groq free-tier latency is erratic** — 0.5 s to 12.8 s for identical calls. Both model calls
+   are now time-bounded (6 s classify, 8 s narrate) with deterministic fallbacks. **Do not remove
+   those timeouts to "improve quality"** — they are what stops the demo stalling for 40 s.
+
+#### The architecture decision that governs everything (2026-07-29)
+
+**The model writes LANGUAGE; code owns FACTS.** The composer LLM emits exactly two fields —
+`reasoning` (logged) and `summary` (1–2 sentences to the citizen). It never sees or reproduces a
+document name, fee, office, URL or duration; those are assembled from the retrieved record.
+
+This is why "0 hallucinations" holds *and* the answer still reads like an agent. **If you ever let
+the model emit factual fields, that guarantee dies.** Verified: after wiring the composer, prose
+became model-written and hallucinations stayed at 0.
+
+Before this, the LLM was used in **exactly one node** (`classify_intent`), `reasoning` was a
+hardcoded constant identical on every answer, and `composer_v1.md` was 69 lines of dead code.
 
 #### Team
 
-**Ali and Gaby are no longer contributing** (Mariam's call, 2026-07-28) — their work streams
-(crawl/index/retrieval, UI) were absorbed. **Maria and Ghina delivered everything asked of them**
-and their work is the backbone of G2 and G3. Consequence for the record: the technical gates now
-have **no independent technical reviewer**. Those sign-offs are recorded as producer self-checks;
-they are NOT filled in. REPORT §7.7 states this.
+**Ali and Gaby are out** (2026-07-28); their streams were absorbed. **Maria and Ghina delivered in
+full** — their verification is the backbone of G2 and G3. Consequence: the technical gates have
+**no independent technical reviewer**. Those sign-offs are recorded as producer self-checks, never
+filled in. REPORT §7.7 names exactly which gates have real independence.
 
 #### Gate status
 
 | Gate | State |
 |---|---|
-| G0 bakeoff | ✅ **PASS** — closed 2026-07-28 by Mariam's decision. `report/evidence/bakeoff.md` was never written (check_g0 persisted only aggregate counts); regenerating it is now OPTIONAL evidence-polish, not a blocker |
-| G1 catalog (249) | ✅ FULLY PASSED |
-| G1b contacts (126) | ✅ FULLY PASSED |
-| G2 corpus (193) | ✅ **FULLY PASSED** — recall 90%, precision 81%, human check complete both directions |
-| G3 core-44 + gold | ⚠️ **PARTIAL** — `curated_core.json` (44) + `gold_claims.json` (8 expert cases) done; **missing `document_sources.json` (≥20 source-checked rows) and `check_g3.py`** |
-| G4 retrieval | ⚠️ **2/4 AUTO** — top-1 88% (CI 53–98%), abstain 1/3, clarify 1/1, 1.26 s/query. Left failing deliberately |
-| G5 graph | ✅ **AUTO PASS** 9/9, 64 unit tests |
-| G6 agent e2e | ✅ **AUTO PASS** 8/8 — live index + live REST, both external calls in trace |
-| G7 freshness/HITL | ⚠️ code exists and is unit-tested (`check_freshness`, `live_service_lookup`, `review_queue`); **`diff_recrawl.py` still a stub, no `check_g7.py`** |
-| G8 eval | ⚠️ **RUN** — 24 cases, failure rate 36.4%, hallucinations 0, p50 1.56 s, adversarial 6/6. Needs the all-24 manual audit |
-| G9 UI | ✅ **AUTO PASS** 5/5 |
-| G10 repo/report | ⚠️ **REPORT.md written (all 8 sections)**; repo hygiene, secret scan script, README refresh not done |
-| G11 demo | ❌ NOT STARTED — human-only: 2 rehearsals, 3 outage drills, backup video |
+| G0 bakeoff | ✅ PASS — closed 2026-07-28 by Mariam's decision (producer == reviewer, recorded as such) |
+| G1 / G1b | ✅ FULLY PASSED |
+| G2 corpus | ✅ **FULLY PASSED** — recall 90%, precision 81%, human check complete both directions |
+| G3 core-44 | ⚠️ **PARTIAL** — exact gaps below |
+| G4 retrieval | ⚠️ **2/4** — top-1 88% (CI 53–98%), abstain 1/3. Left failing deliberately |
+| G5 graph | ✅ AUTO PASS 9/9 · 64 unit tests |
+| G6 agent e2e | ✅ AUTO PASS 8/8 |
+| G7 freshness/HITL | ⚠️ code exists + unit-tested; `diff_recrawl.py` still a stub, no `check_g7.py` |
+| G8 eval | ⚠️ RUN — needs the all-24 manual audit |
+| G9 UI | ✅ AUTO PASS 5/5 |
+| G10 repo/report | ⚠️ REPORT.md complete; repo hygiene + secret-scan script + README refresh not done |
+| G11 demo | ❌ **NOT STARTED — human-only and the top priority** |
 
-#### Headline numbers (all reproducible — see `VERIFY.md`)
+#### G3's exact gaps (audited 2026-07-29)
+
+| requirement | reality |
+|---|---|
+| `core_verification.csv`, 40 rows each signed | **missing.** `curated_core.json` has 44 *selections* — that is the PICK, not a row-by-row field verification. Only **8** services were ever checked field-by-field (the G2 worksheets) |
+| `document_sources.json`, ≥20 rows source-checked | **missing.** Seed has **3 rows, 0 with a `source_url`** |
+| `gold_claims.json` ≥10 **normal** cases | has 8 cases but only **5 are `normal`** — short by 5 |
+| `check_g3.py` | **missing** |
+
+**Do not pad the gold with developer-written cases to reach 10.** Developer-written queries have
+flattered the numbers twice already. Report 5 honestly.
+
+#### Headline numbers (all reproducible — `VERIFY.md`)
 
 | metric | value | source |
 |---|---|---|
 | Eval failure rate | **36.4%** (8/22 scored) | `tests/eval_report.json` |
-| Hallucinated documents | **0** | ibid — but see the caveat below |
-| Latency | p50 **1.56 s**, mean 4.96 s | ibid |
+| Hallucinated documents | **0** | ibid — **never quote bare, see below** |
+| Latency | **p50 1.26 s**, mean 6.7 s, max 33.4 s (first case = cold load) | ibid |
 | Adversarial | **6/6** | ibid |
 | Retrieval top-1 (holdout) | 88% (7/8), CI 53–98% | `check_g4.py` |
 | Extraction recall / precision | 90% / 81% | `check_g2.py` |
-| Conditional structure | 113/180 (63%) flagged, 46 (26%) high-confidence | `tools/conditional_detect.py` |
+| Conditional structure | 113/180 (63%), 46 (26%) high-confidence | `tools/conditional_detect.py` |
 | Core services | 44 (Maria 23 + Ghina 21) | `data/curated_core.json` |
 
-**⚠ Never quote "0 hallucinations" without the caveat.** Documents are PASSED THROUGH from the
-retrieved record, not generated, so fabrication is structurally impossible in that list. The
-detector is real (verified by injecting a fabrication — it caught it), but zero reflects an
-architectural choice, not model restraint. REPORT §6.1 says this; so must anyone presenting.
+**⚠ Never quote "0 hallucinations" without the caveat.** Documents are passed through from the
+record, not generated, so fabrication is structurally impossible in that list. The detector is
+real (verified by injecting a fabrication — it caught it), but zero reflects an architectural
+choice, not model restraint. REPORT §6.1 says this; so must anyone presenting.
 
 #### Findings that carry the report
 
@@ -97,36 +120,38 @@ architectural choice, not model restraint. REPORT §6.1 says this; so must anyon
    affected. Detected and disclosed, not fixed.
 2. **Semantic similarity cannot detect absence.** «شو بدي لأجدد جواز سفري؟» returns
    **إصدار جواز سفر للخيل** (a HORSE passport) at cos 0.598. Abstention is 1/3.
-3. **Arabizi routes as English** — `detect_language` counts script ratio. 2 cases kept in the eval
-   marked `known_fail` so it is measured, not hidden.
+3. **Arabizi routes as English** — script-ratio detector. 2 eval cases marked `known_fail`, kept
+   in and scored so the failure is measured rather than hidden.
 4. **Our own measurement failed twice, and both are in the report.** We published top-1 100% and
-   retracted it (gold was bare titles scoring cos 1.000). And `check_g4` scored on cosine while the
-   runtime thresholded on RRF — the gate passed while the agent refused a valid query. Pattern:
-   **every time the test data got more independent, the numbers got worse** (3/8 on the experts'
-   own questions vs 88% on ours).
-5. **The intent prompt was never being sent** — `system_prompt` defaulted to `""`, so the model
-   classified with no instructions and refused Ghina's own question. ITERATION_LOG entry 1.
+   retracted it (the gold was bare titles scoring cos 1.000); and `check_g4` scored abstention on
+   cosine while the runtime thresholded on RRF — the gate passed while the agent refused a valid
+   query. **Pattern: every time the test data became more independent, the numbers got worse**
+   (3/8 on the experts' own questions vs 88% on ours).
+5. **Two prompts were never being sent.** `intent_classifier` ran with `system_prompt=""` (the
+   model then refused Ghina's own question); the composer was never called at all. ITERATION_LOG
+   entry 1.
 
 #### NEXT ACTIONS, in priority order
 
 1. **G11 demo rehearsal — human-only, nobody else can do it.** 2 runs, 3 outage drills, backup
-   video. Demo prompts that are VERIFIED to work are in `RUN.md`.
-2. **G10 repo hygiene** — secret-scan script, README refresh, fresh-clone test. `VERIFY.md` has
-   the audit commands.
-3. *(optional)* Regenerate `report/evidence/bakeoff.md` (~10 min) — G0 is closed, so this is
-   evidence-polish only: it would fill the last empty Evidence-register row.
-4. **G3 finish** — `document_sources.json` (≥20 rows source-checked) + `check_g3.py`.
-5. **G8 manual audit** of all 24 answers (Maria/Ghina).
-6. Optional: `diff_recrawl.py` for a full G7; `--offline` demo cache.
+   video. Verified-working demo prompts (Arabic and English) are in `RUN.md`.
+2. **G10 repo hygiene** — secret-scan script, README refresh, fresh-clone test (`VERIFY.md` has
+   the audit commands).
+3. **G8 manual audit** of all 24 answers (Maria/Ghina).
+4. **G3 — `document_sources.json` is the highest-VALUE remaining item.** It is what lets
+   `resolve_document` answer "where do I obtain this" for documents that are not themselves
+   services. Needs a human to find and record each source URL; **do not invent them.**
+5. Optional: `diff_recrawl.py` for a full G7; an `--offline` demo cache; regenerate
+   `report/evidence/bakeoff.md` (evidence-polish only, now that G0 is closed).
 
 #### Orientation for a new session
 
-Read in this order: **`VERIFY.md`** (how to check everything, incl. how to catch me being wrong)
-→ **`RUN.md`** (launch + verified demo prompts) → **`report/REPORT.md`** (the argument and every
-number) → **`prompts/ITERATION_LOG.md`** (3 iterations + 2 standing failure modes) → this file.
+Read in this order: **`VERIFY.md`** (how to check everything, including how to catch me being
+wrong) → **`RUN.md`** (launch + verified demo prompts) → **`report/REPORT.md`** →
+**`prompts/ITERATION_LOG.md`** → this file.
 
-Never fill in a human sign-off. Gates are allowed to fail — G2 sat at an honest FAIL until a
-validated fix raised it, and G4 still fails 2/4 on purpose.
+**Never fill in a human sign-off.** Gates are allowed to fail — G2 sat at an honest FAIL until a
+validated fix raised it to 90%, and G4 still fails 2/4 on purpose.
 
 ---
 _(historical planning log below — CURRENT STATE above supersedes it for "where are we now")_
@@ -381,6 +406,38 @@ unless a member picks one up.
   assumed) — expected, not a blocker.
 
 ## Session log (newest first)
+
+- **2026-07-29 (composer wired; merged to main; G0 closed):** Audit found the gap that mattered:
+  **the LLM was used in exactly ONE node** (`classify_intent`). `compose` and `research` never
+  called the model, so `reasoning` — a field the brief mandates — was a **hardcoded constant
+  identical on every answer**, and `composer_v1.md` was 69 lines of dead code. For a project about
+  agentic AI the agent was a RAG pipeline with a classifier bolted on the front.
+  **Fixed with a strict split: the model writes LANGUAGE, code owns FACTS.** New `Narration`
+  schema — the composer emits only `reasoning` + `summary` and never sees a document name, fee,
+  office, URL or duration. Rationale: anything the model is asked to reproduce it can also
+  corrupt, so the cheapest guarantee against a fabricated document is to never route documents
+  through it. **Verified by re-running the whole eval: prose became model-written and
+  hallucinations stayed at 0; failure rate unchanged at 36.4%.** `composer_v1.md` narrowed to
+  match (MANDATE, CoT, OUTPUT SCHEMA and all four few-shot examples rewritten) — a prompt still
+  describing the full answer object would have contradicted its own schema.
+  **Latency bounded rather than hoped for:** free-tier calls measured 0.5–12.8 s for identical
+  requests and one eval case hit 40 s. Both model calls now have timeouts (6 s classify, 8 s
+  narrate) with deterministic fallbacks. **p50 2.55 s → 1.26 s**, mean 10.7 → 6.7 s. Timing out
+  classification is safe by construction: `validate_input` already refuses adversarial input
+  before any model call. Also caught a latent `TypeError` — the Qwen adapter lacked the `timeout`
+  kwarg and would have crashed the moment anyone switched `MODEL_ID`.
+  **G0 closed** by Mariam's decision, recorded honestly as producer == reviewer rather than
+  attributed to Maria; REPORT §7.7 now names which gates have real independence (G1/G1b/G2/G3) and
+  which do not. **Merged `build-graph-g5` → `main`** (fast-forward, 56 files, ~7.9k insertions) and
+  verified on `main` afterwards: 64 unit tests, G2/G5/G6/G9 all PASS, secret scan clean.
+  **G3 audited precisely** — `core_verification.csv` missing, `document_sources.json` missing
+  (seed has 3 rows, 0 with sources), gold has 5 normal cases of the 10 required, `check_g3.py`
+  missing. Decision recorded: **do not pad the gold with developer-written cases** — developer
+  queries have flattered the numbers twice already.
+  Also written: **`VERIFY.md`** (how to check the work, including how to catch me being wrong) and
+  **`RUN.md`** (launch A–Z + verified demo prompts), both after a real "localhost refused to
+  connect" that turned out to be `streamlit` not being on PATH.
+  **Next: G11 demo rehearsal — human-only and the top priority.**
 
 - **2026-07-28 (build day 4 — G4, G6, G9, G8, report; Ali+Gaby's streams absorbed):** Six gates
   moved. **G4** built from two stubs (indexer + hybrid retrieval + dev-only calibration + Wilson
