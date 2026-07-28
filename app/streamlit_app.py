@@ -200,6 +200,38 @@ st.markdown(
         white-space: pre-wrap !important;
         overflow-wrap: anywhere;
       }
+
+      /* The chat input is the one widget the citizen TYPES into, so its contrast cannot be left to
+         the ambient theme. Set the box and the glyphs together, and set -webkit-text-fill-color as
+         well: on WebKit that wins over `color` on a textarea, which is how typed text ended up
+         invisible. .streamlit/config.toml pins the theme; this makes the input independent of it. */
+      [data-testid="stChatInput"],
+      [data-testid="stChatInputContainer"],
+      [data-testid="stBottomBlockContainer"] {
+        background: #ffffff !important;
+      }
+
+      [data-testid="stChatInput"],
+      [data-testid="stChatInputContainer"] {
+        border: 1px solid var(--omb-line) !important;
+        border-radius: 12px !important;
+      }
+
+      [data-testid="stChatInput"] textarea,
+      [data-testid="stChatInputContainer"] textarea {
+        color: var(--omb-ink) !important;
+        -webkit-text-fill-color: var(--omb-ink) !important;
+        background: #ffffff !important;
+        caret-color: var(--omb-blue) !important;
+        font-size: 1.05rem !important;
+      }
+
+      [data-testid="stChatInput"] textarea::placeholder,
+      [data-testid="stChatInputContainer"] textarea::placeholder {
+        color: #7d8794 !important;
+        -webkit-text-fill-color: #7d8794 !important;
+        opacity: 1 !important;
+      }
     </style>
     """,
     unsafe_allow_html=True,
