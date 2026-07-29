@@ -41,6 +41,15 @@ An embedding cannot represent *"this does not exist"*. It can only return the ne
 does. This is why the fallback is not wired to "retrieval found nothing": retrieval **succeeds
 wrongly** here, and a fallback that only fires on failure would never run.
 
+**How the system knows the horse passport is wrong: it does not.** `external_lookup` reads the
+citizen's words and nothing else, never the retrieved record, so it cannot compare the two. A
+human verified beforehand that Dawlati publishes no human passport service and wrote that into a
+three-entry table; when a passport query arrives without an animal term, the curated record
+replaces whatever retrieval produced. The horse passport is not rejected on its merits, it is
+overwritten. That is a deliberate choice and the honest way to describe it: source selection is
+the one decision where a wrong guess sends a citizen to the wrong ministry, so it belongs to a
+person rather than to a similarity score.
+
 ---
 
 ## 3. Where the system prompts are built
@@ -81,8 +90,11 @@ Six calls in this run, two of them to the outside world.
 live Dawlati page, and this record has no Dawlati post id, so asking would attach one site's
 freshness to another site's facts.
 
-`live_service_lookup` returning `exists=False` is the confirmation: Dawlati itself says it has no
-such service. The fallback is a checked conclusion, not a guess.
+**What `exists=False` is, and what it is not.** It is corroboration you can point at: Dawlati's own
+API, asked directly, reports nothing matching. It is **not** the mechanism that triggered the
+fallback. Nothing routes on it — the call runs after the decision, and if it had returned
+`exists=True` the answer would be identical. Presenting it as the check that caught the horse
+passport would misdescribe the system.
 
 ---
 
