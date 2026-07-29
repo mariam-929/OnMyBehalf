@@ -25,7 +25,17 @@ class AgentState(TypedDict, total=False):
     resolved_documents: list[ResolvedDocument]
     service_freshness: Optional[dict]  # FreshnessResult dumped (deterministic system step, N3)
     live_lookup: Optional[LiveLookupResult]
+    # The model's rescue plan, set by plan_research and consumed by research. It MUST be declared
+    # here: LangGraph filters node updates against this schema, so an undeclared key is silently
+    # dropped. When it was missing, `research` never saw a plan, kept taking the first-pass branch,
+    # re-ran the live freshness call on every iteration, and never incremented replans_used — an
+    # infinite loop that presented as a network hang inside the TLS handshake.
+    research_plan: Optional[dict]
     replans_used: int
+    # Set only by the external-source branch. Like research_plan above, it MUST be declared here or
+    # LangGraph drops the node's update against this schema and the UI can never show the badge
+    # that tells the citizen the facts came from a site other than Dawlati.
+    external_source_used: bool
     candidates: list[dict]             # ClarifyOut candidates
     suggestions: list[dict]            # NotFoundOut suggestions
     time_estimate: Optional[dict]

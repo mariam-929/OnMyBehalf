@@ -116,8 +116,12 @@ Stakeholder: citizens; system owner: OMSAR content ops (owns the review queue).
 - Service DETAIL (documents/fees/steps) NOT in REST (JS-rendered) → Playwright. **Contacts also NOT
   in REST** (verified — acf empty, no ajax route) → `/en/directory` Playwright crawl.
 - Live REST `?search=` works + per-record `modified_gmt` returns 200 (basis for the 2 external tools).
-- `portal.dawlati.gov.lb` login-walled — out of scope. Dawlati has an "OMSAR Assistant" chatbot →
-  differentiate (structured/citable/HITL vs generic Q&A). robots `ai-train=no` → retrieval-with-attribution only.
+- `portal.dawlati.gov.lb` login-walled — out of scope. robots `ai-train=no` → retrieval-with-attribution only.
+- **⚠ CORRECTED 2026-07-28: there is NO "OMSAR Assistant" chatbot on the public site** (the recon
+  note claiming one was wrong or it has since been removed — re-verified 5 ways). The competitor
+  baseline is **Dawlati's own site search**, which returns the generic «الخدمات» index page for
+  بطاقة الهوية / تسجيل ولادة / جواز سفر alike, and template junk for English. Never claim we
+  benchmarked a chatbot. Evidence + the fair-to-Dawlati caveat: `report/evidence/competitor.md`.
 
 ## Scope (do not silently reopen; detail in docs/SCOPE.md §§6,11,15)
 IN: 249 catalog / 219 service pages (frozen), 40 verified core; resolver + lookup table; REST

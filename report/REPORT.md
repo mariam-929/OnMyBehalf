@@ -28,6 +28,11 @@ represent the answer faithfully.
 factual field is traceable to a government page; the system says when it does not know; and it
 flags for human review rather than papering over gaps. Section 6 shows where it still fails.
 
+Accountability is also what decides where the language model is allowed to act. It writes prose;
+it plans which unresolved documents to retry; it never emits a fact and never chooses a source
+(§3.4, §3.6). Those two exclusions are not caution for its own sake — they are the reason the
+guarantees in this report survive contact with the evaluation.
+
 ---
 
 ## 2. Data: what Dawlati actually contains
@@ -55,6 +60,13 @@ is **إصدار جواز سفر للخيل** — a horse passport. The project w
 cluster (identity, birth, marriage, divorce, death, civil extracts), which does exist and is what
 citizens most often need.
 
+That discovery is also what produced the last piece of architecture. If the country's most-asked
+procedure is absent from the portal, then a system that only reads the portal is structurally
+incapable of answering it — no amount of retrieval tuning changes that. §3.6 describes the branch
+that follows: when Dawlati has no record, the agent falls back to the authority that actually
+issues the document. The passport is answerable again, from general-security.gov.lb, with a
+citation and an explicit statement that the answer did not come from Dawlati.
+
 ---
 
 ## 3. Method
@@ -66,7 +78,8 @@ A **LangGraph** state machine implementing perceive → plan → act → observe
 ```
 detect_language → validate_input → classify_intent → retrieve
    → research (bounded: plan → execute → ≤1 replan) → compose → validate_schema → respond
-        ↘ invalid_request   ↘ clarification_needed   ↘ service_not_found   ↘ error
+        ↘ invalid_request   ↘ clarification_needed   ↘ error
+        ↘ external_lookup (only when Dawlati has no record, §3.6) ↘ service_not_found
 ```
 
 Every node appends to `trace_events`, which is the **single** source for both the UI trace panel
@@ -88,7 +101,7 @@ connection badly enough to make our live REST calls time out. LaBSE was cached, 
 for cross-lingual sentence retrieval across 109 languages including Arabic, and `EMBED_MODEL` is
 an environment variable so the comparison remains a one-line change.
 
-### 3.3 Tools (4, of which 2 are external)
+### 3.3 Tools (5, of which 3 are external)
 
 | tool | kind | what it does |
 |---|---|---|
@@ -96,6 +109,7 @@ an environment variable so the comparison remains a one-line change.
 | `resolve_document` | local | resolves each required document to where it is obtained; **abstains** below threshold |
 | `check_freshness` | **external** | live REST `modified_gmt` vs our snapshot → `unchanged / changed / unverified` |
 | `live_service_lookup` | **external** | live REST `?search=` — does this service still exist, is there a newer one |
+| `external_source_lookup` | **external** | when Dawlati has no record at all, fetches the procedure from the issuing authority's own site (§3.6) |
 
 `resolve_document` uses a **stricter** threshold than retrieval (0.62 vs 0.45) plus a tie band. The
 asymmetry is deliberate: a wrong service answer is visible and recoverable, but a wrong *"go here
@@ -115,7 +129,10 @@ confirmed it — prose became model-written and **hallucinations stayed at 0**.
 Both model calls are time-bounded (6 s classification, 8 s narration) and both degrade to
 deterministic behaviour on timeout. Free-tier latency is erratic — identical calls measured
 between 0.5 s and 12.8 s — and an unbounded wait in front of an audience is a worse failure than
-a plainer sentence. Bounding them moved p50 from 2.55 s to 1.26 s.
+a plainer sentence. Bounding them moved p50 from 2.55 s to 1.26 s, measured at the time of that
+change. The headline p50 in §6.1 is lower again (0.76 s); with 22 cases and eight of them
+sub-second refusals, the median moves easily between runs, and we have not attributed that
+difference to any specific cause.
 
 Before this was wired, `reasoning` — a field the brief mandates — was a hardcoded constant string,
 identical on every answer.
@@ -127,6 +144,75 @@ as such in the answer and here. It starts at 0.9 for a curated-core service or 0
 deducts for stale or unverified freshness, unresolved documents, incomplete records, and
 conditional structure the data model cannot express (§5). Anything flagged is written to an
 append-only, file-locked, deduplicated review queue owned by OMSAR content ops.
+
+### 3.6 Answering when Dawlati has nothing: a federated source layer
+
+§2 records that the single most-asked transaction in Lebanon — the passport — is **not on Dawlati
+at all**, and §6.3 records what that cost: the agent returned a horse passport, then, once
+abstention was tightened, returned nothing. Both are correct behaviours over a corpus that does not
+contain the answer. Neither helps the citizen. But the documents *are* published — by the General
+Directorate of General Security, the authority that actually issues them.
+
+So the graph gained one branch:
+
+```
+retrieve ──found──────────────→ research → compose
+         ──ambiguous──────────→ clarification_needed
+         ──not_found──→ external_lookup ──hit──→ research → compose
+                                        ──miss─→ service_not_found
+```
+
+**It fires only where the system already gave up.** Every path that produces an answer today goes
+from `retrieve` straight to `research` and never reaches this node, so the branch cannot regress
+any behaviour that worked before it existed. That is a property of the wiring, not a result we
+measured, and a test asserts it. Wired off (`external_fn=None`, the default) the graph is
+byte-identical to the previous version.
+
+**Design decision: the model does not choose the source.** This is the most important sentence in
+the section. It would have been easy — and would have demoed well — to let an LLM decide which
+government site to consult. We did not, for the same reason the model is not allowed to emit a
+document name (§3.4): a model that selects URLs can invent one, and source selection is the single
+decision where a fabrication puts a citizen physically in front of the wrong ministry. Instead:
+
+| step | decided by |
+|---|---|
+| "Dawlati has no record" | retrieval score below the abstention threshold — deterministic |
+| "which official source covers this" | a curated registry a human opened, read and verified |
+| "fetch it" | HTTP, with a committed snapshot as fallback |
+| "what does it say" | deterministic extraction, no model input |
+
+The reasoning loop is unchanged and remains where it belongs: `plan_research` (§3.1) decides which
+unresolved documents to retry and with what search key, bounded to one re-plan, addressing
+documents by index so it cannot put words on screen. **The agent reasons within a source; code
+decides which sources exist.**
+
+**How it extends.** The branch is source-agnostic by construction. It calls any function of
+`(query, language) → record`, and a source contributes a record in the *same shape* the Dawlati
+ingester produces — so composition, caveats, confidence, the review queue, the UI and the eval
+harness all work on a new source with no changes. Adding one is therefore two data steps and no
+graph changes:
+
+1. append an entry to the registry (subject terms, qualifiers, the AR and EN URLs, the authority);
+2. run `tools/crawler/fetch_external_snapshots.py` to capture and verify the snapshot.
+
+What does **not** come free, and we would mislead by implying otherwise: **extraction is
+per-site.** Every ministry publishes its own HTML, and the regexes that read General Security's
+pages will not read the Ministry of Justice's. That per-source extractor is the real unit of cost
+in extending this — roughly the same work the Dawlati ingester needed — and it is why the layer
+ships with three verified URLs rather than a claim of national coverage. The registry scales by
+table entry; the extractors scale by engineering effort.
+
+What *does* generalise for free is the accountability, which is the part that matters: every
+external answer carries the source domain, a clickable URL to the exact page, a caveat stating in
+the citizen's language that the service is not on Dawlati, and a freshness label of `unverified`
+with a note saying whether the bytes came off the live site in this run or out of the committed
+snapshot. `unverified` is not a limitation here, it is the only honest value: freshness is
+change-detection against a stored `modified_gmt` (§7), and this source publishes no modification
+timestamp to compare against. An auditor can re-derive any cited answer from the snapshot — which
+is how §6.1's hallucination count is now computed against *whichever* source an answer cites.
+
+**Measured effect.** Failure rate 36.4% → **31.8%**, hallucinated documents **0**, and the
+country's most-asked procedure moved from unanswerable to answered with a citation.
 
 ---
 
@@ -190,12 +276,12 @@ their own procedure clusters — the only queries in this project not authored b
 
 | metric | value |
 |---|---|
-| **Failure rate** | **36.4%** (8 of 22 scored) |
+| **Failure rate** | **31.8%** (7 of 22 scored) |
 | **Hallucinated documents** | **0** |
-| **Latency** | mean 6.7 s · **p50 1.26 s** · max 33.4 s (first case, cold encoder load) |
+| **Latency** | mean 3.6 s · **p50 0.76 s** · max 31.9 s (first case, cold encoder load) |
 | Adversarial | **6/6** |
 | Normal | 3/5 |
-| Edge | 5/11 |
+| Edge | 6/11 |
 | Retrieval top-1 (holdout) | 88% (7/8), 95% CI 53–98% |
 | Extraction recall / precision | 90% / 81% on 8 human-verified services |
 
@@ -210,9 +296,9 @@ fabrication is structurally impossible in the document list. Zero reflects a des
 (extractive, not generative). It is a meaningful property to claim, but it is not evidence that the
 language model resists hallucination.
 
-### 6.2 Two failures of measurement, not just of the system
+### 6.2 Three failures of measurement, not just of the system
 
-Both are reported because they shaped every number above.
+All three are reported because they shaped every number above.
 
 **We reported 100% top-1 and it was wrong.** The first retrieval gold set was dominated by bare
 service titles, which score cosine 1.000 because the query is byte-identical to the indexed text.
@@ -224,12 +310,25 @@ holdout only protects you if it resembles production, and ours did not.*
 retrieve node still thresholded on RRF score. The gate reported PASS while the agent abstained on a
 valid demo query. Both now call one shared `classify_outcome()`.
 
-The pattern in both: **each time the test data or harness became more independent, measured
-performance got worse.** Retrieval scored 3/8 on the experts' questions versus 88% on ours.
+**The hallucination detector counted 13 hallucinations that did not exist.** The moment an answer
+legitimately cited a second source (§3.6), the check resolved its `source_url` against the Dawlati
+corpus, found no matching file, and returned **every document in the answer as fabricated** — 13
+phantom hallucinations on one passport answer, against a headline claim of zero. The detector was
+not wrong so much as under-specified: it had silently assumed Dawlati was the only source that
+could ever be cited. We changed the implementation, **not the definition** — a hallucination is
+still *a document absent from the source it is attributed to* — so the check now rebuilds the
+cited external record from its committed snapshot and compares against that. The zero in §6.1 is
+therefore a **stronger** claim than before: it holds against whichever source each answer cites,
+rather than against one hardcoded corpus. A metric that cannot see a new source will not report
+that it is blind; it will report a number, and the number will be wrong.
+
+The pattern in all three: **each time the test data or harness became more independent, measured
+performance got worse — or the harness turned out to have been measuring something narrower than
+we thought.** Retrieval scored 3/8 on the experts' questions versus 88% on ours.
 
 ### 6.3 Failure analysis
 
-Of the 8 scored failures, roughly half are strict-scoring artefacts rather than defects: two are
+Of the 7 scored failures, roughly half are strict-scoring artefacts rather than defects: two are
 `clarification_needed` where the gold expected an answer, and the candidates are genuine siblings
 that the query does not disambiguate (#11542 divorce-after-sect-change vs #11546
 marriage-after-sect-change). Asking rather than guessing is the behaviour we want. The genuine
@@ -247,6 +346,35 @@ represent *"this does not exist"*, only *"here is the nearest thing that does"*.
 **1 of 3**. Boilerplate stripping made this worse, and the trade was taken knowingly: answering
 real questions is the primary function, and the citation plus the confidence score are what make a
 wrong retrieval recoverable for the user.
+
+*Partially resolved.* The retrieval defect is unchanged — an embedding still cannot represent
+absence, and that is not fixable with a threshold. What changed is the **consequence**: the query
+now reaches the external-source branch (§3.6) and is answered from General Security's own site with
+a citation. The failure mode is contained rather than cured, and only for procedures a curated
+source covers; the driving licence, which has no curated source, still terminates in
+`service_not_found`.
+
+**Failure mode 3 — a document resolver is not a rule detector, and the score cannot tell you
+which it just matched.** Extending per-document resolution to the external passport record failed,
+and the measurement is the interesting part. Of 13 lines extracted from the Arabic page, **exactly
+one resolved against the corpus — and it was wrong.** «أما بالنسبة لطلبات عائلات عسكريي الأمن
+العام…» is a *rule* about who may submit fewer documents, not a document, and it resolved to the
+civil-registry directorate at **0.6367** — while a genuine requirement scored **0.7004** and
+abstained. So the score does not separate right from wrong here, and no threshold tuned on it would
+have: this is the same conclusion `accept_rescue` reached about alias retries (§3.3), reached again
+by a different route.
+
+The cause is structural rather than a resolver defect. General Security's Arabic page nests
+procedural rules inside the same `<ul>` as the documents — under an applicant heading, where its
+English twin puts them under "Remarks" — so the extracted list is a mixture and the resolver has no
+signal to tell the two apart. FR4 requires abstention rather than attaching a doubtful source, so
+**per-document resolution is deliberately not offered for external records**: all 13 lines are
+carried through to the citizen, marked unresolved and flagged for review. The complete checklist
+survives; no document is attributed to an authority that did not issue it. One wrong *"go here to
+obtain this"* costs more than thirteen honest *"not resolved"*.
+
+This is the clearest example in the project of the rule that produced every other result in it:
+**when the evidence does not support a claim, the system says so rather than degrading quietly.**
 
 ---
 
@@ -268,6 +396,14 @@ locking would let concurrent writers both observe "absent" and both append.
 2. **Conditional structure is detected, not represented** (§5) — 63% of services affected.
 3. **Abstention is weak (1/3)** — §6.3.
 4. **Arabizi is unsupported** — §6.3.
+4b. **The federated layer is three URLs, one authority, and it is not self-extending** (§3.6).
+   Adding a source is a registry entry plus a snapshot capture, but each new *site* needs its own
+   extractor, so this is a demonstrated mechanism rather than national coverage. External answers
+   also carry two honest reductions in service: freshness can only ever be `unverified`, because
+   the source publishes no modification timestamp to detect change against, and per-document
+   resolution is withheld (§6.3, failure mode 3). A citizen asking about a passport gets a cited,
+   complete checklist — not the *where do I obtain each document* they would get for a
+   civil-registry service.
 5. **Extraction recall is 90%, not 100%.** Human verification rated 3 of 8 services inadequate;
    the residual misses are documents living in the notes section rather than the documents field.
 6. **Small n.** 12 holdout retrieval queries, 22 scored eval cases, 8 human-verified services.
@@ -297,6 +433,12 @@ Eleven stage gates (G0–G11), each with an automated check and a human check, r
   open rather than being signed.
 - **Gates were allowed to fail.** G2 sat at an honest FAIL (80% recall) until a validated fix
   raised it to 90%. G4 still fails 2 of 4 criteria and is reported as such.
+- **A changed expectation was recorded, not quietly edited.** Adding the federated layer made one
+  eval case (`edge_absent_1`, the passport) change from correctly abstaining to correctly
+  answering. Rather than relax the expectation, we changed it *and* added an assertion that the
+  answer cites `general-security.gov.lb` — because without it the loosened case would have passed
+  on any answer at all, including a fallback to the horse passport. The reason is written into the
+  test case itself.
 
 Human verification was decisive rather than ceremonial. Two experts checked 8 services field by
 field and found **two distinct extraction failure classes** plus the structural finding in §5.
@@ -319,8 +461,17 @@ EMBED_MODEL=sentence-transformers/LaBSE python tools/indexer.py
 EMBED_MODEL=sentence-transformers/LaBSE python tests/gates/check_g4.py   # retrieval
 EMBED_MODEL=sentence-transformers/LaBSE python tests/gates/check_g6.py   # agent e2e
 EMBED_MODEL=sentence-transformers/LaBSE python tests/run_eval.py         # the 24 cases
-pytest tests/unit -q                                                     # 64 unit tests
+pytest tests/unit -q                                                     # 159 unit tests
 streamlit run app/streamlit_app.py
+```
+
+The six external-source snapshots (§3.6) are **committed**, so nothing above requires the network
+to reach general-security.gov.lb. To re-capture them, or to check that the committed copies still
+parse after a source change:
+
+```bash
+python tools/crawler/fetch_external_snapshots.py            # re-capture all six
+python tools/crawler/fetch_external_snapshots.py --verify   # re-extract from disk, write nothing
 ```
 
 `data/` is gitignored and regenerated by the first two commands; the numbers in §6 come from

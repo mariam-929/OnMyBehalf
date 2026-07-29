@@ -72,6 +72,21 @@ def build_tools() -> dict:
     }
 
 
+def build_external_fn(offline: bool = False):
+    """The curated external-source fallback, or None to disable the branch entirely.
+
+    `offline=True` keeps the fallback but forbids the live fetch, so the outage drill still answers
+    a passport question from the committed snapshot — and `FreshnessResult.note` says so rather
+    than implying the site was reached.
+    """
+    from tools.external_source import external_lookup
+
+    def _lookup(query: str, language: str):
+        return external_lookup(query, language, allow_live=not offline)
+
+    return _lookup
+
+
 def answer(query: str, messages: list[dict] | None = None, offline: bool = False) -> dict:
     """Run one query through the live agent. Returns the final AgentState.
 
@@ -91,10 +106,21 @@ def answer(query: str, messages: list[dict] | None = None, offline: bool = False
     adapter = None if offline else get_adapter_or_none()
     tools = None if offline else build_tools()
     core = load_curated_core()
+    external_fn = build_external_fn(offline=offline)
 
     # phase 1 — identify
     first = run(query, adapter=adapter, search_fn=lambda q, k=5: search_fn(q, k),
-                curated_core=core, messages=messages or [])
+                curated_core=core, messages=messages or [], external_fn=external_fn)
+
+    # The external branch produces a record without retrieval ever saying "found", so it needs the
+    # same phase-2 treatment as a Dawlati hit. Without this it would compose from phase 1, where
+    # `tools` is deliberately absent — and every required document would reach the citizen
+    # unresolved, which is precisely the "where do I obtain each one" the answer exists to give.
+    if first.get("external_source_used") and first.get("service_record"):
+        return run(query, adapter=adapter, search_fn=lambda q, k=5: search_fn(q, k),
+                   tools=tools, curated_core=core, messages=messages or [],
+                   external_fn=external_fn, service_record=first["service_record"])
+
     if first.get("retrieval_outcome") != "found":
         return first  # abstained / clarified / invalid — already terminal and correct
 

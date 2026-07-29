@@ -1,0 +1,17 @@
+# Pin the theme. Without this file Streamlit follows the viewer's OS/browser preference, while
+# app/streamlit_app.py hardcodes a LIGHT palette (white cards, #f8fafc panels, dark ink). On a
+# machine in dark mode the two disagreed: the chat input kept the dark base theme's background
+# while its text inherited the forced dark ink, so what you typed was invisible.
+#
+# The demo may run on a different laptop and a projector, so the theme must not depend on whose
+# machine it is. These values mirror the CSS custom properties in app/streamlit_app.py — change
+# both together or they will drift back apart.
+[theme]
+base = "light"
+primaryColor = "#155eef"          # --omb-blue
+backgroundColor = "#fbfcfd"
+secondaryBackgroundColor = "#f5f7f9"  # --omb-soft
+textColor = "#15202b"             # --omb-ink
+
+[browser]
+gatherUsageStats = false
