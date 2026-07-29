@@ -275,6 +275,30 @@ _DOC_START = re.compile(
     r"|the\s|a\s|an\s|copy|application|photo|certificate|passport|permit)", re.I)
 
 
+# A condition sentence can still NAME a required document, in parentheses. On /ar/posts/11 the
+# identity requirement is «… تحدّد ضوابط قبول المستند الثبوتي اللبناني ( هوية و/أو إخراج قيد ) …» —
+# a real requirement (the English twin lists it as its own bullet, and /ar/posts/408 restates it),
+# buried in a sentence that opens with «عند», so the head-noun test filed the whole line as a
+# condition and the citizen lost a requirement.
+#
+# Extract the parenthesised group only when it looks like a NAME rather than a clause: it must
+# start with a document head-noun, be short, and contain no temporal or conditional markers. The
+# family-exception on the same page — «(هوية أو بيان قيد إفرادي لا يعود تاريخه لأكثر من سنة واحدة)»
+# — is deliberately NOT extracted: it carries «لا يعود تاريخه», so it is a case-specific rule, not
+# a document name, and hoisting it would put a second near-duplicate ID line in the checklist.
+_PAREN_GROUP = re.compile(r"[（(]\s*([^)）]{3,45})\s*[)）]")
+_CLAUSE_MARKER = re.compile(r"لا\s+يعود|في\s+حال|إذا|اذا|بشرط|لأكثر\s+من|اكثر\s+من")
+
+
+def _document_inside(line: str) -> str | None:
+    """The document named in parentheses inside a condition line, or None."""
+    for match in _PAREN_GROUP.finditer(line or ""):
+        inner = match.group(1).strip()
+        if _DOC_START.match(inner) and not _CLAUSE_MARKER.search(inner):
+            return inner
+    return None
+
+
 def split_documents_and_conditions(lines: list[str] | None) -> tuple[list[str], list[str]]:
     """Separate the papers a citizen collects from the conditions governing them.
 
@@ -295,7 +319,14 @@ def split_documents_and_conditions(lines: list[str] | None) -> tuple[list[str], 
         text = (line or "").strip()
         if not text:
             continue
-        (documents if _DOC_START.match(text) else conditions).append(text)
+        if _DOC_START.match(text):
+            documents.append(text)
+            continue
+        conditions.append(text)
+        # The line stays a condition — it genuinely carries one — but a document named inside it
+        # is also surfaced as a requirement, because the citizen has to bring it.
+        if (inner := _document_inside(text)) and inner not in documents:
+            documents.append(inner)
     return documents, conditions
 
 

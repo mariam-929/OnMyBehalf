@@ -34,6 +34,30 @@ def test_rules_are_separated_from_papers():
     assert all(c.startswith(("لا", "تحدد", "في")) for c in conditions)
 
 
+def test_document_named_inside_a_condition_is_still_required():
+    """REGRESSION. /ar/posts/11 states the identity requirement inside a sentence that opens with
+    «عند», so the head-noun test filed the whole line as a condition and «هوية و/أو إخراج قيد»
+    never reached the checklist — a requirement the citizen must bring, silently absent. The
+    English twin lists it as its own bullet and /ar/posts/408 restates it, so it is genuinely a
+    document, not an inference."""
+    line = ("عند تقدّم أصحاب العلاقة بطلب جواز سفر بيومتري للمرّة الأولى، "
+            "تحدّد ضوابط قبول المستند الثبوتي اللبناني ( هوية و/أو إخراج قيد ) وفقاً للتالي:")
+    documents, conditions = split_documents_and_conditions([line])
+    assert "هوية و/أو إخراج قيد" in documents
+    assert line in conditions, "the sentence still carries a condition and must stay one"
+
+
+def test_case_specific_clause_in_parentheses_is_not_hoisted():
+    """The same page's family exception — «(هوية أو بيان قيد إفرادي لا يعود تاريخه لأكثر من سنة)»
+    — must NOT become a document. It carries «لا يعود تاريخه», so it is a rule about which
+    document is acceptable for one group of applicants, not a paper everyone brings."""
+    line = ("أما بالنسبة لطلبات عائلات عسكريي الأمن العام، فيكتفى بضم مستند تعريف واحد "
+            "(هوية أو بيان قيد إفرادي لا يعود تاريخه لأكثر من سنة واحدة)")
+    documents, conditions = split_documents_and_conditions([line])
+    assert documents == []
+    assert conditions == [line]
+
+
 def test_conditions_are_never_discarded():
     """They carry parental consent and validity windows. Dropping them would be the silent
     truncation of PROGRESS 2026-07-27, moved to a new place."""

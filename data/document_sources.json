@@ -30,6 +30,13 @@
      "_evidence": "Unresolved in «شو الأوراق المطلوبة لتجديد بطاقة الهوية؟». Nearest match بطاقة هوية at cos 0.614 — the service being applied for, not the issuer of the report.",
      "notes": "", "source_url": "", "verified_on": ""},
 
+    {"doc_name_ar": "هوية و/أو إخراج قيد", "doc_name_en": "ID card and/or civil status extract",
+     "issuing_authority": "دائرة الأحوال الشخصية (النفوس) / المختار",
+     "where": "دائرة الأحوال الشخصية (النفوس) أو المختار",
+     "notes": "Composed from two rows this team already wrote (إخراج قيد إفرادي, إخراج قيد عائلي — both «دائرة الأحوال الشخصية / المختار») and confirmed against the two Dawlati services that ARE these documents: #11464 بطاقة هوية and #11548 بيان قيد عائلي وإفرادي. NOT resolvable by similarity: the corpus top-1 for this phrase is #11414 «طلب الإطلاع و/أو الحصول على مستندات» at cos 0.592 — a wrong service that matched on «و/أو» — while the two correct services score 0.497 and 0.506. That inversion is why the row is curated rather than inferred. Requirement verified 2026-07-29 against https://www.general-security.gov.lb/ar/posts/11 and its linked detail page /ar/posts/408 («تحدّد ضوابط قبول المستند الثبوتي اللبناني (هوية و/أو إخراج قيد)»). verified_on blank pending a teammate's read.",
+     "source_url": "https://dawlati.gov.lb/ministry_service_ser/%d8%a8%d8%b7%d8%a7%d9%82%d8%a9-%d9%87%d9%88%d9%8a%d8%a9/",
+     "verified_on": ""},
+
     {"doc_name_ar": "جواز السفر السابق", "doc_name_en": "Previous passport",
      "issuing_authority": "بحوزة صاحب الطلب", "where": "بحوزتك — يُقدَّم مع الطلب",
      "notes": "Not issued by anyone on application: it is the applicant's own existing passport. Both /ar/posts/11 («جواز السفر السابق في حال وجوده») and /ar/posts/69 («جواز السفر البيومتري المنوي إبداله») ask the citizen to present it and neither names an issuing office, because there is none. If it is LOST, the procedure is different — see /ar/posts/14, which requires a declaration at a General Security regional centre. Web-checked 2026-07-29; verified_on left blank pending a teammate's read.",
