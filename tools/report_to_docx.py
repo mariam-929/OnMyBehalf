@@ -194,7 +194,10 @@ def convert(source: Path, target: Path) -> int:
             i += 1
             continue
         if re.match(r"^(-{3,}|_{3,}|\*{3,})$", stripped):
-            doc.add_paragraph().add_run("―" * 30).font.color.rgb = RGBColor(0xBB, 0xBB, 0xBB)
+            # A markdown rule becomes whitespace, not a drawn line. Rendering it as a row of dash
+            # characters put a decorative divider between every section, which is a visual tic the
+            # headings already handle.
+            doc.add_paragraph()
             i += 1
             continue
 
