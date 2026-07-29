@@ -30,6 +30,11 @@
      "_evidence": "Unresolved in «شو الأوراق المطلوبة لتجديد بطاقة الهوية؟». Nearest match بطاقة هوية at cos 0.614 — the service being applied for, not the issuer of the report.",
      "notes": "", "source_url": "", "verified_on": ""},
 
+    {"doc_name_ar": "جواز السفر السابق", "doc_name_en": "Previous passport",
+     "issuing_authority": "بحوزة صاحب الطلب", "where": "بحوزتك — يُقدَّم مع الطلب",
+     "notes": "Not issued by anyone on application: it is the applicant's own existing passport. Both /ar/posts/11 («جواز السفر السابق في حال وجوده») and /ar/posts/69 («جواز السفر البيومتري المنوي إبداله») ask the citizen to present it and neither names an issuing office, because there is none. If it is LOST, the procedure is different — see /ar/posts/14, which requires a declaration at a General Security regional centre. Web-checked 2026-07-29; verified_on left blank pending a teammate's read.",
+     "source_url": "https://www.general-security.gov.lb/ar/posts/11", "verified_on": ""},
+
     {"doc_name_ar": "بطاقة الهوية الأصلية", "doc_name_en": "Original ID card",
      "issuing_authority": "", "where": "",
      "_hint": "Held by the citizen already; `where` may legitimately be 'you already hold this'.",
@@ -55,8 +60,8 @@
 
     {"doc_name_ar": "صورة شمسية", "doc_name_en": "Passport-style photograph",
      "issuing_authority": "", "where": "",
-     "_hint": "Not a government-issued document. `where` is likely a photographer, with the mukhtar certifying it — both the ID-card and passport texts require mukhtar certification.",
-     "_evidence": "Unresolved on both the ID-card (cos 0.446) and passport records. Appears in most civil-registry services, so one row here fixes many answers.",
+     "_hint": "LEFT EMPTY BECAUSE THE OFFICIAL SOURCES CONFLICT — this needs a human decision, not a guess. https://www.general-security.gov.lb/ar/posts/80 says «سوف تُعتمد الصورة المُلتقطة لهم في الدائرة أو المركز الإقليمي» (the photo taken AT the General Security centre is the one used), while https://www.general-security.gov.lb/ar/posts/11 and /ar/posts/69 both require the citizen to BRING a photo (4.5x3.5, «مصادق عليها بخاتم المختار»). Web-checked 2026-07-29.",
+     "_evidence": "Unresolved on both the ID-card record (cos 0.446) and the passport record. Appears across most civil-registry services, so one row here would fix many answers — which is exactly why it must not be filled from the wrong page. Suggested wordings if you decide: «تُلتقط في المركز الإقليمي للأمن العام» (follows posts/80) or «من استوديو تصوير، مصدَّقة بخاتم المختار» (follows posts/11 and 69; note the studio part is NOT stated by any source). A third honest option is to leave it unresolved and let the review queue carry the conflict.",
      "notes": "", "source_url": "", "verified_on": ""},
 
     {"doc_name_ar": "بيان قيد عائلي أو إفرادي", "doc_name_en": "Family or individual civil extract",
