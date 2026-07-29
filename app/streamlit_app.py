@@ -1125,25 +1125,34 @@ def render_runtime_honesty(state: dict) -> None:
         st.warning(
             "MODEL STEP DEGRADED — the runtime explicitly reports a deterministic fallback or model-service failure. The UI does not present the model as successfully used."
         )
-        with st.expander("Why the UI shows this warning", expanded=False):
-            for item in degradations:
-                st.code(item, language=None)
+        # Flat, not an expander: this renders inside the collapsed Reasoning panel and Streamlit
+        # forbids nesting one expander in another.
+        st.caption("Why the UI shows this warning")
+        for item in degradations:
+            st.code(item, language=None)
 
 
 def render_answer(env: dict) -> None:
+    """What the citizen came for. Everything here is either the answer or a warning about the
+    answer — nothing that requires knowing how the system works.
+
+    The technical breakdown of the conditional flags (kind, high-confidence vs heuristic, the
+    matched source wording) moved to the Reasoning panel. The citizen-facing consequence of those
+    flags did NOT: `render_caveats` states it in plain Arabic or English, and it stays above the
+    checklist, because "this list merges several applicant cases" changes how the list must be
+    read and is not a technical detail.
+    """
     out = env.get("output") or {}
     service = out.get("service") or {}
     language = str(env.get("language") or "en")
 
-    st.markdown("## Procedure answer" if language == "en" else "## إجابة الإجراء")
     render_summary(out, language)
     render_service_identity(service, language)
     render_freshness_banner(service)
     render_service_facts(out)
     render_contacts(service)
 
-    # Deliberately above the document list: these flags change how it must be read.
-    render_conditional_flags(out.get("conditional_flags") or [])
+    # Deliberately above the document list: these caveats change how it must be read.
     render_caveats(out.get("caveats") or [])
     render_documents(out)
     # After the checklist: it is derived FROM the checklist, and only makes sense once the citizen
@@ -1262,8 +1271,9 @@ def render_terminal(env: dict) -> None:
     render_value(stage, size="1rem", weight="700")
     detail = out.get("detail")
     if detail:
-        with st.expander("Technical detail", expanded=False):
-            st.code(str(detail), language=None)
+        # Flat: render_terminal runs inside the Answer panel, and expanders cannot nest.
+        st.caption("Technical detail")
+        st.code(str(detail), language=None)
 
 
 # ---------------------------------------------------------------------------
@@ -1319,7 +1329,11 @@ def render_call(call: dict, event_index: int) -> None:
         st.code(compact(call.get("result"), 320), language=None)
 
 
-def render_trace(state: dict, elapsed: float, *, current: bool) -> None:
+def render_trace(state: dict, elapsed: float, *, current: bool = False) -> None:
+    # `current` used to auto-expand the trace on the newest turn. The trace now lives inside the
+    # collapsed Reasoning panel, which owns that decision, so the flag is accepted and ignored
+    # rather than removed — callers still pass it and it may drive presentation again later.
+    del current
     events = state.get("trace_events") or []
     calls = flatten_calls(events)
     external_calls = sum(
@@ -1344,7 +1358,8 @@ def render_trace(state: dict, elapsed: float, *, current: bool) -> None:
     else:
         st.info("No tool call was emitted in this run. This is expected for some early terminal actions, such as a safety refusal.")
 
-    with st.expander("Full step-by-step trace", expanded=current):
+    st.markdown("**Full step-by-step trace**")
+    with st.container(border=True):
         if not events:
             st.caption("No trace events returned.")
         for index, event in enumerate(events, 1):
@@ -1373,27 +1388,46 @@ def render_trace(state: dict, elapsed: float, *, current: bool) -> None:
 
 
 def render_raw_json(env: dict) -> None:
-    with st.expander("Raw structured JSON envelope", expanded=False):
-        st.caption("This is the exact structured output returned for the turn.")
-        st.json(env)
+    st.markdown("**Raw structured JSON envelope**")
+    st.caption("This is the exact structured output returned for the turn.")
+    st.json(env, expanded=False)
 
 
 def render_assistant_turn(turn: dict, *, current: bool) -> None:
+    """Two panels: what the citizen asked for, and how we got there.
+
+    ANSWER is open by default and contains no vocabulary a citizen would have to learn.
+    REASONING is collapsed and holds everything that is about the system rather than about the
+    procedure — the runtime mode, the confidence arithmetic, the conditional-flag machinery, the
+    node-by-node trace and the raw envelope.
+
+    The trace stays reachable in one click rather than being removed: the brief requires the
+    reasoning loop to be observable, and the demo has to show a tool call.
+    """
     env = turn.get("envelope") or {}
+    out = env.get("output") or {}
     state = turn.get("state") or {"trace_events": []}
     elapsed = float(turn.get("elapsed") or 0.0)
+    language = str(env.get("language") or "en")
 
-    render_runtime_honesty(state)
-    if env.get("action") == "answer":
-        render_answer(env)
-    else:
-        render_terminal(env)
+    answer_label = "Answer" if language == "en" else "الإجابة"
+    reasoning_label = "Reasoning" if language == "en" else "الاستدلال والتفاصيل التقنية"
 
-    render_rule()
-    render_confidence(env)
-    render_rule()
-    render_trace(state, elapsed, current=current)
-    render_raw_json(env)
+    with st.expander(answer_label, expanded=True):
+        if env.get("action") == "answer":
+            render_answer(env)
+        else:
+            render_terminal(env)
+
+    with st.expander(reasoning_label, expanded=False):
+        render_runtime_honesty(state)
+        render_rule()
+        render_confidence(env)
+        if env.get("action") == "answer":
+            render_conditional_flags(out.get("conditional_flags") or [])
+        render_rule()
+        render_trace(state, elapsed, current=current)
+        render_raw_json(env)
 
 
 # ---------------------------------------------------------------------------
