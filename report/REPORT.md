@@ -130,9 +130,10 @@ Both model calls are time-bounded (6 s classification, 8 s narration) and both d
 deterministic behaviour on timeout. Free-tier latency is erratic — identical calls measured
 between 0.5 s and 12.8 s — and an unbounded wait in front of an audience is a worse failure than
 a plainer sentence. Bounding them moved p50 from 2.55 s to 1.26 s, measured at the time of that
-change. The headline p50 in §6.1 is lower again (0.76 s); with 22 cases and eight of them
-sub-second refusals, the median moves easily between runs, and we have not attributed that
-difference to any specific cause.
+change. The headline p50 in §6.1 differs again (0.98 s); with 22 cases and eight of them
+sub-second refusals, the median moves easily between runs — we measured 0.76 s and 0.98 s on two
+consecutive runs of the same commit — and we have not attributed that spread to any specific
+cause. The figures quoted in §6.1 are the ones in the committed `tests/eval_report.json`.
 
 Before this was wired, `reasoning` — a field the brief mandates — was a hardcoded constant string,
 identical on every answer.
@@ -278,7 +279,7 @@ their own procedure clusters — the only queries in this project not authored b
 |---|---|
 | **Failure rate** | **31.8%** (7 of 22 scored) |
 | **Hallucinated documents** | **0** |
-| **Latency** | mean 3.6 s · **p50 0.76 s** · max 31.9 s (first case, cold encoder load) |
+| **Latency** | mean 3.3 s · **p50 0.98 s** · max 31.3 s (first case, cold encoder load) |
 | Adversarial | **6/6** |
 | Normal | 3/5 |
 | Edge | 6/11 |

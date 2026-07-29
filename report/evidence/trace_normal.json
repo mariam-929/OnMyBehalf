@@ -1,9 +1,9 @@
 {
   "query": "شو المستندات المطلوبة لإعادة قيد مطلقة؟",
-  "elapsed_s": 28.68,
+  "elapsed_s": 140.8,
   "envelope": {
     "action": "answer",
-    "reasoning": "Matched the query to a Dawlati service and assembled its published requirements. (Deterministic composition — no model available.)",
+    "reasoning": "The query about documents for “إعادة قيد مطلقة” matches the service record. The source lists five required documents, four of which are linked to a verifiable source while one remains untraced, and it publishes the applicable fees and the office for submission. The record is marked complete and the source page has not changed since our snapshot, so overall confidence is high despite the single unresolved document reference.",
     "confidence": 0.8,
     "language": "ar",
     "needs_human_review": true,
@@ -25,7 +25,7 @@
           "status": "unchanged",
           "source_modified_gmt": "2026-07-13T14:10:39",
           "snapshot_modified_gmt": "2026-07-13T14:10:39",
-          "checked_at": "2026-07-28T20:11:19.108375+00:00",
+          "checked_at": "2026-07-29T00:26:09.163408+00:00",
           "note": "unchanged since snapshot 2026-07-13T14:10:39; change-detection only, substantive currency not guaranteed"
         },
         "record_status": "complete"
@@ -111,32 +111,32 @@
       },
       "caveats": [],
       "conditional_flags": [],
-      "summary": null
+      "summary": "لتجديد قيد مطلقة، يرجى تقديم المستندات المطلوبة وفقاً للقائمة الرسمية إلى الجهة المختصة."
     }
   },
   "trace_events": [
     {
       "node": "detect_language",
-      "at": "2026-07-28T20:11:18.672549+00:00",
+      "at": "2026-07-29T00:26:08.330460+00:00",
       "arabic_chars": 33,
       "latin_chars": 0,
       "decided": "ar"
     },
     {
       "node": "validate_input",
-      "at": "2026-07-28T20:11:18.673547+00:00",
+      "at": "2026-07-29T00:26:08.331461+00:00",
       "ok": true
     },
     {
       "node": "classify_intent",
-      "at": "2026-07-28T20:11:18.755726+00:00",
+      "at": "2026-07-29T00:26:08.832635+00:00",
       "intent": "service_query",
-      "mode": "fallback",
-      "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gp"
+      "mode": "model",
+      "latency_s": 0.5
     },
     {
       "node": "retrieve",
-      "at": "2026-07-28T20:11:18.772218+00:00",
+      "at": "2026-07-29T00:26:08.848089+00:00",
       "mode": "live",
       "n": 5,
       "outcome": "found",
@@ -150,7 +150,7 @@
     },
     {
       "node": "research",
-      "at": "2026-07-28T20:11:23.031779+00:00",
+      "at": "2026-07-29T00:26:12.946701+00:00",
       "mode": "live",
       "n_documents": 5,
       "tool_calls": 7,
@@ -193,15 +193,15 @@
     },
     {
       "node": "plan_research",
-      "at": "2026-07-28T20:11:23.151272+00:00",
-      "mode": "fallback",
+      "at": "2026-07-29T00:26:13.490145+00:00",
+      "mode": "model",
       "n_unresolved": 1,
       "retries_planned": 0,
-      "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gp"
+      "latency_s": 0.542
     },
     {
       "node": "research",
-      "at": "2026-07-28T20:11:23.152270+00:00",
+      "at": "2026-07-29T00:26:13.491144+00:00",
       "mode": "rescue",
       "tool_calls": 0,
       "calls": [],
@@ -215,7 +215,7 @@
     },
     {
       "node": "compose",
-      "at": "2026-07-28T20:11:23.235481+00:00",
+      "at": "2026-07-29T00:26:15.231866+00:00",
       "confidence": 0.8,
       "confidence_reasons": [
         "base=core",
@@ -223,17 +223,17 @@
       ],
       "conditional_flags": [],
       "needs_human_review": true,
-      "narration": "fallback",
-      "narration_latency_s": null
+      "narration": "model",
+      "narration_latency_s": 1.739
     },
     {
       "node": "validate_schema",
-      "at": "2026-07-28T20:11:23.235481+00:00",
+      "at": "2026-07-29T00:26:15.232891+00:00",
       "ok": true
     },
     {
       "node": "respond",
-      "at": "2026-07-28T20:11:23.236483+00:00",
+      "at": "2026-07-29T00:26:15.232891+00:00",
       "action": "answer"
     }
   ]
