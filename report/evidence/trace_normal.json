@@ -1,9 +1,9 @@
 {
   "query": "شو المستندات المطلوبة لإعادة قيد مطلقة؟",
-  "elapsed_s": 30.17,
+  "elapsed_s": 28.68,
   "envelope": {
     "action": "answer",
-    "reasoning": "Matched the citizen’s request to the service “إعادة قيد مطلقة”. The official record lists five required documents, but only four are linked to a source, leaving one document without a verified reference; fees and the applying authority are published, and the source page is unchanged since our snapshot, so overall confidence is high apart from the missing document reference.",
+    "reasoning": "Matched the query to a Dawlati service and assembled its published requirements. (Deterministic composition — no model available.)",
     "confidence": 0.8,
     "language": "ar",
     "needs_human_review": true,
@@ -25,7 +25,7 @@
           "status": "unchanged",
           "source_modified_gmt": "2026-07-13T14:10:39",
           "snapshot_modified_gmt": "2026-07-13T14:10:39",
-          "checked_at": "2026-07-28T08:37:35.491312+00:00",
+          "checked_at": "2026-07-28T20:11:19.108375+00:00",
           "note": "unchanged since snapshot 2026-07-13T14:10:39; change-detection only, substantive currency not guaranteed"
         },
         "record_status": "complete"
@@ -111,32 +111,32 @@
       },
       "caveats": [],
       "conditional_flags": [],
-      "summary": "لإعادة قيد مطلقة، تجد المستندات المطلوبة ومكان تقديم الطلب وفقاً للمصدر الرسمي. يرجى ملاحظة أن أحد المستندات غير موثق في المصدر، لذا قد تحتاج إلى التأكد منه لدى الجهة المختصة."
+      "summary": null
     }
   },
   "trace_events": [
     {
       "node": "detect_language",
-      "at": "2026-07-28T08:37:34.565521+00:00",
+      "at": "2026-07-28T20:11:18.672549+00:00",
       "arabic_chars": 33,
       "latin_chars": 0,
       "decided": "ar"
     },
     {
       "node": "validate_input",
-      "at": "2026-07-28T08:37:34.565521+00:00",
+      "at": "2026-07-28T20:11:18.673547+00:00",
       "ok": true
     },
     {
       "node": "classify_intent",
-      "at": "2026-07-28T08:37:35.170467+00:00",
+      "at": "2026-07-28T20:11:18.755726+00:00",
       "intent": "service_query",
-      "mode": "model",
-      "latency_s": 0.603
+      "mode": "fallback",
+      "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gp"
     },
     {
       "node": "retrieve",
-      "at": "2026-07-28T08:37:35.188035+00:00",
+      "at": "2026-07-28T20:11:18.772218+00:00",
       "mode": "live",
       "n": 5,
       "outcome": "found",
@@ -150,7 +150,7 @@
     },
     {
       "node": "research",
-      "at": "2026-07-28T08:37:38.375986+00:00",
+      "at": "2026-07-28T20:11:23.031779+00:00",
       "mode": "live",
       "n_documents": 5,
       "tool_calls": 7,
@@ -186,11 +186,36 @@
           "result": "exists=False"
         }
       ],
-      "per_doc_freshness_degraded": true
+      "per_doc_freshness_degraded": true,
+      "n_source_documents": 5,
+      "n_resolved": 5,
+      "documents_complete": true
+    },
+    {
+      "node": "plan_research",
+      "at": "2026-07-28T20:11:23.151272+00:00",
+      "mode": "fallback",
+      "n_unresolved": 1,
+      "retries_planned": 0,
+      "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gp"
+    },
+    {
+      "node": "research",
+      "at": "2026-07-28T20:11:23.152270+00:00",
+      "mode": "rescue",
+      "tool_calls": 0,
+      "calls": [],
+      "retries_attempted": 0,
+      "rescues_accepted": 0,
+      "rescues_rejected": 0,
+      "rejected_detail": [],
+      "plan_rejections": [],
+      "n_resolved": 5,
+      "still_unresolved": 1
     },
     {
       "node": "compose",
-      "at": "2026-07-28T08:37:40.041529+00:00",
+      "at": "2026-07-28T20:11:23.235481+00:00",
       "confidence": 0.8,
       "confidence_reasons": [
         "base=core",
@@ -198,17 +223,17 @@
       ],
       "conditional_flags": [],
       "needs_human_review": true,
-      "narration": "model",
-      "narration_latency_s": 1.665
+      "narration": "fallback",
+      "narration_latency_s": null
     },
     {
       "node": "validate_schema",
-      "at": "2026-07-28T08:37:40.042517+00:00",
+      "at": "2026-07-28T20:11:23.235481+00:00",
       "ok": true
     },
     {
       "node": "respond",
-      "at": "2026-07-28T08:37:40.043514+00:00",
+      "at": "2026-07-28T20:11:23.236483+00:00",
       "action": "answer"
     }
   ]

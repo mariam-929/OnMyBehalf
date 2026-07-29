@@ -110,10 +110,11 @@
       "id": "edge_absent_1",
       "query": "كيف أجدد جواز سفري؟",
       "category": "edge",
-      "expect_action": "service_not_found",
+      "expect_action": "answer",
       "expect_post_id": null,
+      "expect_source_domain": "general-security.gov.lb",
       "source": "dev",
-      "note": "passport absent from Dawlati"
+      "note": "EXPECTATION CHANGED 2026-07-28 (was service_not_found). Passport is still absent from Dawlati — report §2 stands unchanged. What changed is that the external-source branch answers it from the issuing authority's own site, so abstaining is no longer the best available response and scoring against it would penalise a behaviour we deliberately replaced. edge_absent_2 (driving licence) and edge_absent_3 (not a government service) still expect service_not_found — no curated source exists for either, so they keep guarding the abstention path."
     },
     {
       "id": "edge_absent_2",

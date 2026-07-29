@@ -61,6 +61,18 @@ def count_hallucinated_documents(env: dict) -> tuple[int, list[str]]:
         if rec.get("url") == url:
             record = rec
             break
+
+    if record is None:
+        # An answer may now cite a curated external government site (report §2: passports are not
+        # on Dawlati). The DEFINITION of a hallucination is unchanged — a document absent from the
+        # source it is attributed to — so it is checked against the source it actually cites,
+        # rebuilt from the committed snapshot. Before this, every correctly-extracted external
+        # document counted as fabricated purely because the corpus glob could not see the file:
+        # 13 phantom hallucinations on one passport answer, against a headline claim of zero.
+        from tools.external_source import record_for_url
+
+        record = record_for_url(url)
+
     if record is None:
         return len(docs), [d.get("name_ar", "") for d in docs]  # cited a source we cannot find
 
@@ -80,6 +92,12 @@ def score(case: dict, env: dict) -> tuple[bool, str]:
         return False, f"action {got} != {want}"
     if want == "answer":
         pid_url = ((env.get("output") or {}).get("service") or {}).get("source_url", "")
+        # A case that expects an external source must CITE that source. Without this, relaxing
+        # edge_absent_1 from service_not_found to answer would pass on any answer at all —
+        # including one that fell back to a Dawlati service, which is the horse passport.
+        want_domain = case.get("expect_source_domain")
+        if want_domain and want_domain not in pid_url:
+            return False, f"expected a source on {want_domain}, cited {pid_url or '(none)'}"
         if case.get("expect_post_id"):
             rec = next((json.loads(f.read_text(encoding="utf-8"))
                         for f in (ROOT / "data" / "corpus").glob(f"{case['expect_post_id']}.json")),

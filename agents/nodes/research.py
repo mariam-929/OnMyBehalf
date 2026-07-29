@@ -178,7 +178,15 @@ def research(state: dict, tools: dict | None = None) -> dict:
     # find where to obtain it is a separate question from whether the citizen needs it, and only
     # the source decides the second one. See the note on MAX_MODEL_TOOL_CALLS above.
     resolve = tools.get("resolve_document")
-    if resolve:
+    if record.get("source_domain"):
+        # EXTERNAL record: the corpus resolver cannot be trusted against it (measured — see
+        # tools/external_source.abstained_documents). Every document is carried through the answer,
+        # marked unresolved, so the citizen still gets the complete published checklist and nothing
+        # is attributed to an authority that did not issue it.
+        from tools.external_source import abstained_documents
+
+        documents = abstained_documents(record)
+    elif resolve:
         for name in doc_names:
             documents.append(resolve(name))
             calls.append({"tool": "resolve_document", "arg": name[:60]})
