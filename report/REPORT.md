@@ -163,11 +163,27 @@ retrieve ──found──────────────→ research → c
                                         ──miss─→ service_not_found
 ```
 
-**It fires only where the system already gave up.** Every path that produces an answer today goes
-from `retrieve` straight to `research` and never reaches this node, so the branch cannot regress
-any behaviour that worked before it existed. That is a property of the wiring, not a result we
-measured, and a test asserts it. Wired off (`external_fn=None`, the default) the graph is
+**It was first wired to fire only where the system had already given up — and that was wrong.**
+The original design routed the fallback off `not_found` alone, on the reasoning that a branch which
+cannot be reached from any answering path cannot regress one. The eval agreed: `edge_absent_1`
+passed, and the passport was answered from General Security.
+
+Opening the UI and retyping the question in four other ways showed the flaw. Retrieval does not
+merely *fail* on passport queries — **it succeeds wrongly.** «شو بدي لأجدد جواز سفري؟» matches
+«إصدار جواز سفر للخيل», the horse passport, above threshold; the graph therefore reported `found`,
+went to compose, and never reached the fallback at all. **Four of six natural phrasings returned
+the horse passport. Only the eval's own phrasing abstained**, which is precisely why the eval was
+green — the gold case had encoded one wording, and the wording was the unrepresentative one.
+
+The fallback now sits on the `found` arm as well, and the guarantee is stated more narrowly and
+more honestly: **the node is a no-op unless the curated registry matches the query**, so its blast
+radius is the procedures a human put in that table, not every answer. An explicit animal term
+(«خيل», «حصان», *horse*) vetoes the registry, so a citizen who genuinely wants the horse passport
+still gets Dawlati's record. Wired off (`external_fn=None`, the default) the graph remains
 byte-identical to the previous version.
+
+*This is the second time in this project that a green gate described a narrower reality than we
+believed (§6.2), and the first time a human simply retyping a question found it.*
 
 **Design decision: the model does not choose the source.** This is the most important sentence in
 the section. It would have been easy — and would have demoed well — to let an LLM decide which
@@ -277,7 +293,7 @@ their own procedure clusters — the only queries in this project not authored b
 
 | metric | value |
 |---|---|
-| **Failure rate** | **31.8%** (7 of 22 scored) |
+| **Failure rate** | **31.8%** (7 of 22 scored) · range 31.8–36.4% across runs, see below |
 | **Hallucinated documents** | **0** |
 | **Latency** | mean 3.3 s · **p50 0.98 s** · max 31.3 s (first case, cold encoder load) |
 | Adversarial | **6/6** |
@@ -289,6 +305,16 @@ their own procedure clusters — the only queries in this project not authored b
 Two Arabizi cases are marked `known_fail` and **kept in the set and scored** — a failure excluded
 from your own eval is a failure you are hiding — and reported separately so the headline rate stays
 readable.
+
+**The headline rate is not deterministic, and quoting it as though it were would be dishonest.**
+Across repeated runs of the same commit it oscillates between **31.8% and 36.4%**, and the whole
+difference is one case: «how do I open a bank account» is classified sometimes as
+`invalid_request` (out of jurisdiction) and sometimes as `service_not_found` (a government service
+we do not hold). The gold expects the latter. Both readings are defensible — a bank account is not
+a government service at all — so this is a genuinely borderline input on which a non-zero-temperature
+classifier is entitled to disagree with itself. With 22 scored cases, **one flipping case moves the
+headline by 4.6 percentage points**, which is the more useful thing to take from this number than
+either endpoint of the range.
 
 **On the zero hallucinations.** The detector is real: we verified it by injecting a fabricated
 document into a known-good answer, and it was caught. But the honest framing is architectural, not
@@ -348,11 +374,18 @@ represent *"this does not exist"*, only *"here is the nearest thing that does"*.
 real questions is the primary function, and the citation plus the confidence score are what make a
 wrong retrieval recoverable for the user.
 
-*Partially resolved.* The retrieval defect is unchanged — an embedding still cannot represent
-absence, and that is not fixable with a threshold. What changed is the **consequence**: the query
-now reaches the external-source branch (§3.6) and is answered from General Security's own site with
-a citation. The failure mode is contained rather than cured, and only for procedures a curated
-source covers; the driving licence, which has no curated source, still terminates in
+*Contained, not cured — and the containment initially missed most of the cases.* The retrieval
+defect is unchanged: an embedding still cannot represent absence, and no threshold fixes that. What
+changed is the **consequence** — the query is answered from General Security's own site with a
+citation (§3.6).
+
+The first attempt at that containment only covered queries where retrieval *abstained*. Because the
+horse passport is frequently retrieved **above** threshold, four of six natural phrasings still
+returned it, and the eval did not catch this because its single gold phrasing was one of the two
+that abstained. **A gold case pins one wording; a citizen has many.** The fallback now also
+overrides a wrong retrieval hit when the curated registry matches, with an animal-term veto so a
+genuine horse-passport question still reaches Dawlati's record. Coverage is still limited to
+procedures a curated source covers — the driving licence has none and still terminates in
 `service_not_found`.
 
 **Failure mode 3 — a document resolver is not a rule detector, and the score cannot tell you

@@ -105,6 +105,12 @@ REGISTRY: list[dict] = [
     },
 ]
 
+# An explicit animal term means the citizen wants Dawlati's «إصدار جواز سفر للخيل», not a human
+# passport. Kept as one flat list rather than per-entry: every registry entry is currently a
+# passport procedure, and a term that disqualifies one disqualifies all of them.
+EXCLUDE_TERMS = ("خيل", "خيول", "حصان", "احصنة", "أحصنة", "حيوان", "حيوانات", "بهيمة",
+                 "horse", "horses", "equine", "animal", "livestock")
+
 AUTHORITY_AR = "المديرية العامة للأمن العام"
 AUTHORITY_EN = "General Directorate of General Security"
 WHERE_AR = "المراكز الإقليمية للأمن العام"
@@ -117,9 +123,16 @@ def _match(query: str, language: str) -> dict | None:
     A miss costs the citizen nothing (they get today's `service_not_found`); a false hit would
     answer a question about service A with the documents for service B. So the SUBJECT must be
     present — a bare "I lost it" resolves to nothing.
+
+    EXCLUSIONS exist because Dawlati publishes «إصدار جواز سفر للخيل» — a HORSE passport — and it
+    is the only «جواز سفر» record in the corpus. A citizen asking about a horse passport must still
+    be served that Dawlati record, so an explicit animal term vetoes the registry and lets ordinary
+    retrieval answer.
     """
     q = normalize_ar(query or "")
     if not q:
+        return None
+    if any(normalize_ar(x) in q for x in EXCLUDE_TERMS):
         return None
     subj_key = "subject_en" if language == "en" else "subject_ar"
     qual_key = "qualifiers_en" if language == "en" else "qualifiers_ar"

@@ -134,12 +134,21 @@ def build_graph(adapter=None, search_fn=None, tools=None, curated_core=None, ext
                             {"invalid": "respond_invalid",
                              "follow_up": "retrieve",      # follow-ups re-retrieve with history
                              "service_query": "retrieve"})
-    # `not_found` no longer terminates directly. It detours through external_lookup, which either
-    # supplies a record from a curated official source (report §2: passports are not on Dawlati at
-    # all) or changes nothing and falls through to the same response as before. The `found` and
-    # `ambiguous` arms are untouched, so nothing that answers today can be affected by this edge.
+    # BOTH `found` and `not_found` pass through external_lookup.
+    #
+    # `not_found` is the obvious case. `found` is here because of a defect found in the UI on
+    # 2026-07-29, after the eval had passed: retrieval does not merely fail on passport queries,
+    # it SUCCEEDS WRONGLY. «شو بدي لأجدد جواز سفري؟» matches «إصدار جواز سفر للخيل» — the horse
+    # passport — above threshold, so the graph went to compose and never reached this node.
+    # 4 of 6 natural phrasings behaved that way; only the eval's own phrasing abstained. Routing
+    # the fallback solely off `not_found` therefore fixed the rarer half of the problem.
+    #
+    # The node is still a NO-OP unless the curated registry matches the query, so the blast radius
+    # is exactly the procedures a human put in that table (all passport, today) — not every found
+    # answer. That is a narrower guarantee than "the found arm is untouched", and it is stated
+    # honestly rather than claimed to be the same thing.
     g.add_conditional_edges("retrieve", route_after_retrieve,
-                            {"found": "research",
+                            {"found": "external_lookup",
                              "ambiguous": "respond_clarify",
                              "not_found": "external_lookup"})
     g.add_conditional_edges("external_lookup", route_after_external,

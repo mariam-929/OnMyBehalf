@@ -167,13 +167,58 @@ def test_external_branch_answers_when_wired():
     assert env["output"]["service"]["freshness"]["status"] == "unverified"
 
 
-def test_found_path_never_reaches_the_external_branch():
-    """Structural guarantee, asserted rather than assumed: nothing that answers today can regress
-    through this feature."""
-    g = build_graph(external_fn=lambda q, l: pytest.fail("external branch reached on a found path"))
+def test_a_found_dawlati_answer_is_not_disturbed_when_the_registry_misses():
+    """The ACTUAL guarantee, stated accurately.
+
+    An earlier version of this test was called `test_found_path_never_reaches_the_external_branch`
+    and asserted a property that is no longer true: since 2026-07-29 the found arm DOES pass
+    through the node, because retrieval does not merely fail on passport queries, it succeeds
+    wrongly (the horse passport). The real guarantee is narrower — the node is a no-op unless the
+    curated registry matches — and that is what is asserted here.
+    """
+    g = build_graph(external_fn=lambda q, l: None)  # registry miss
     r = g.invoke({"query": "شو الأوراق المطلوبة لتجديد بطاقة الهوية؟", "trace_events": [],
                   "messages": [], "retrieval_outcome": "found",
                   "service_record": {"post_id": 1, "title_ar": "بطاقة هوية", "url": "u",
                                      "record_status": "complete", "raw_text": "",
                                      "sections": {"required_documents": ["أ"]}}})
-    assert r["final_response"]["action"] == "answer"
+    env = r["final_response"]
+    assert env["action"] == "answer"
+    assert env["output"]["service"]["name_ar"] == "بطاقة هوية"
+    assert not env["output"]["caveats"] or "general-security" not in env["output"]["caveats"][0]
+
+
+@pytest.mark.parametrize("query", [
+    "كيف بطلع جواز سفر للخيل؟",
+    "جواز سفر للحصان",
+    "horse passport requirements",
+])
+def test_animal_passport_queries_stay_on_dawlati(query):
+    """REGRESSION, and the reason EXCLUDE_TERMS exists. «إصدار جواز سفر للخيل» is a REAL Dawlati
+    service and the only «جواز سفر» record in the corpus. The registry must not hijack a citizen
+    who genuinely wants it — the horse passport is the right answer to a horse-passport question."""
+    assert _match(query, "ar") is None
+    assert _match(query, "en") is None
+
+
+def test_registry_overrides_a_wrong_retrieval_hit():
+    """The defect this fix exists for: retrieval SUCCEEDED and was wrong. 4 of 6 natural passport
+    phrasings matched the horse passport above threshold, so a fallback wired only to `not_found`
+    never ran."""
+    external = {
+        "post_id": None, "type": "external_gov_site",
+        "url": "https://www.general-security.gov.lb/ar/posts/11",
+        "title_ar": "جواز سفر بيومتري", "title_en": "Biometric passport",
+        "raw_text": "طلب جواز سفر", "record_status": "complete",
+        "sections": {"required_documents": ["طلب جواز سفر"], "fees": None,
+                     "processing_time": None, "where_to_apply": None,
+                     "authority": "الأمن العام", "steps": None},
+        "source_domain": "general-security.gov.lb", "served_from": "snapshot",
+        "fetched_at": "2026-07-28T00:00:00+00:00",
+    }
+    g = build_graph(external_fn=lambda q, l: external)
+    r = g.invoke({"query": "شو بدي لأجدد جواز سفري؟", "trace_events": [], "messages": [],
+                  "retrieval_outcome": "found"})
+    svc = r["final_response"]["output"]["service"]
+    assert "general-security" in svc["source_url"]
+    assert "للخيل" not in svc["name_ar"]

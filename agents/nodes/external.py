@@ -77,5 +77,10 @@ def external_lookup_node(state: dict, external_fn=None) -> dict:
 
 
 def route_after_external(state: dict) -> str:
-    """A record means we can answer after all; otherwise the original not-found response stands."""
-    return "found" if state.get("service_record") else "not_found"
+    """Answer if we have anything to answer FROM — a curated external record, or the Dawlati hit
+    retrieval already made. Only a query that matched neither falls through to `service_not_found`,
+    which is exactly the behaviour that existed before this node.
+    """
+    if state.get("service_record") or state.get("external_source_used"):
+        return "found"
+    return "found" if state.get("retrieval_outcome") == "found" else "not_found"
