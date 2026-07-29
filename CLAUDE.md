@@ -8,8 +8,12 @@
 > `.env` (gitignored). Repo: github.com/mariam-929/OnMyBehalf.
 >
 > **As of 2026-07-29 — THE SYSTEM WORKS END TO END.** UI -> agent -> live Dawlati REST -> cited
-> answer. On **`main`**, synced. **PASSED: G0, G1, G1b, G2, G5, G6, G9.** Partial: G3, G4 (2/4,
-> failing on purpose), G7, G8, G10. **Not started: G11 demo — human-only and the top priority.**
+> answer, **plus a federated fallback to general-security.gov.lb when Dawlati has no record**
+> (report §3.6) so the passport is answerable again. **Genuinely on `main` and pushed as of
+> 2026-07-29 (eabe654)** — main had been 9 commits behind for most of the build, so any earlier
+> note claiming "on main, synced" was wrong. **PASSED: G0, G1, G1b, G2, G5, G6, G9.** Partial: G3,
+> G4 (2/4, failing on purpose), G7, G8, G10. **Not started: G11 demo — human-only and the top
+> priority.** Eval on the merge commit: **31.8% failure, 0 hallucinations, 159 unit tests.**
 > Full detail + every gotcha: `docs/PROGRESS.md` -> CURRENT STATE.
 >
 > **The architecture rule that governs everything: the model writes LANGUAGE, code owns FACTS.**
