@@ -544,36 +544,11 @@ def format_time_estimate(te: dict | None, stated_processing: dict | None) -> tup
 # Sidebar and page shell
 # ---------------------------------------------------------------------------
 def render_sidebar() -> None:
-    meta = corpus_meta()
-    model_label, model_note = current_model_mode()
-
     with st.sidebar:
         st.title("OnMyBehalf")
         st.caption("Evidence-first interface for Lebanese government procedures.")
         st.divider()
 
-        c1, c2 = st.columns(2)
-        c1.metric("Services", meta["services"])
-        c2.metric("Core reviewed", meta["core"])
-        st.caption(f"Corpus snapshot: **{meta['snapshot']}**")
-        st.caption(
-            "Retrieval threshold: "
-            + ("**calibrated**" if meta["calibrated"] else "**uncalibrated**")
-        )
-
-        st.divider()
-        st.markdown("**Runtime honesty**")
-        st.caption(f"Model: **{model_label}**")
-        st.caption(model_note)
-        st.caption("Live source calls: **disabled**" if OFFLINE else "Live source calls: **enabled when invoked**")
-
-        st.divider()
-        st.markdown("**Coverage limitation**")
-        st.caption(
-            "Coverage is limited by Dawlati's published corpus. Missing services are not silently reconstructed from general knowledge."
-        )
-
-        st.divider()
         st.markdown("**Plan your trips** · prototype")
         st.caption("Optional. If you tell us your area, we group the offices you must visit into "
                    "as few journeys as possible and put the nearest first.")
