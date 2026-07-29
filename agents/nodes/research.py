@@ -173,20 +173,21 @@ def research(state: dict, tools: dict | None = None) -> dict:
     record = state.get("service_record") or {}
     doc_names = ((record.get("sections") or {}).get("required_documents")) or []
 
+    # NOTE ON EXTERNAL RECORDS. Resolution used to be skipped entirely for them, because 1 of 13
+    # extracted lines resolved and it was WRONG — a rule about General Security families attributed
+    # to the civil-registry directorate at 0.6367. That was a symptom: the list mixed documents with
+    # procedural rules, and a rule matched a service. `split_documents_and_conditions` now removes
+    # the rules upstream, so what arrives here is documents, and ordinary resolution applies. The
+    # three that remain on the passport record score 0.41–0.49 against the corpus — comfortably
+    # under THETA_DOC — so they abstain rather than mis-resolve, and only a curated lookup row can
+    # answer them. That is the intended behaviour, not a gap.
+
     # --- resolve EVERY published document ----------------------------------
     # Every document the source lists must reach the answer, resolved or not. Whether we could
     # find where to obtain it is a separate question from whether the citizen needs it, and only
     # the source decides the second one. See the note on MAX_MODEL_TOOL_CALLS above.
     resolve = tools.get("resolve_document")
-    if record.get("source_domain"):
-        # EXTERNAL record: the corpus resolver cannot be trusted against it (measured — see
-        # tools/external_source.abstained_documents). Every document is carried through the answer,
-        # marked unresolved, so the citizen still gets the complete published checklist and nothing
-        # is attributed to an authority that did not issue it.
-        from tools.external_source import abstained_documents
-
-        documents = abstained_documents(record)
-    elif resolve:
+    if resolve:
         for name in doc_names:
             documents.append(resolve(name))
             calls.append({"tool": "resolve_document", "arg": name[:60]})

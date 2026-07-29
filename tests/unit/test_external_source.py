@@ -11,8 +11,40 @@ import pytest
 from agents.graph import build_graph
 from agents.nodes.external import external_lookup_node, route_after_external
 from tools.external_source import (
-    REGISTRY, abstained_documents, extract_sections, external_freshness, _match,
+    REGISTRY, abstained_documents, extract_sections, external_freshness,
+    split_documents_and_conditions, _match,
 )
+
+
+# ---------------------------------------------------------------- documents vs conditions
+def test_rules_are_separated_from_papers():
+    """A citizen collects documents; they SATISFY conditions. Listing both as "required documents"
+    asks where to obtain a sentence — which is why every line on the passport answer reported an
+    unknown source. Measured on /ar/posts/11: 3 documents, 10 conditions."""
+    documents, conditions = split_documents_and_conditions([
+        "طلب جواز سفر لبناني من الأنموذج المعتمد قياس A4",
+        "صورة شمسية ملونة حديثة للوجه كاملاً",
+        "جواز السفر السابق في حال وجوده",
+        "لا يُمنح القاصر دون الثامنة عشرة من العمر جواز سفر إلا بعد موافقة الوالدين",
+        "تحدد صلاحية إذن السفر بثلاثة أشهر",
+        "في حال وفاة الوالدين أو أحدهما",
+    ])
+    assert len(documents) == 3 and len(conditions) == 3
+    assert documents[0].startswith("طلب")
+    assert all(c.startswith(("لا", "تحدد", "في")) for c in conditions)
+
+
+def test_conditions_are_never_discarded():
+    """They carry parental consent and validity windows. Dropping them would be the silent
+    truncation of PROGRESS 2026-07-27, moved to a new place."""
+    lines = ["بيان قيد إفرادي", "لا يُمنح القاصر جواز سفر إلا بموافقة الوالدين"]
+    documents, conditions = split_documents_and_conditions(lines)
+    assert len(documents) + len(conditions) == len(lines)
+
+
+def test_split_handles_empty_and_none():
+    assert split_documents_and_conditions(None) == ([], [])
+    assert split_documents_and_conditions(["", "   "]) == ([], [])
 
 
 # ---------------------------------------------------------------- registry matching

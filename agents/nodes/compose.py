@@ -216,6 +216,7 @@ def compose(state: dict, curated_core: set[int] | None = None, adapter=None,
             record_status=record.get("record_status", "incomplete"),
         ),
         required_documents=documents,  # type: ignore[arg-type]
+        conditions=list(record.get("conditions") or []),
         time_estimate=state.get("time_estimate") or TimeEstimate(computable=False),
         caveats=caveats,
         conditional_flags=flags,

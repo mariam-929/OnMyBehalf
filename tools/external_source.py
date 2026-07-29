@@ -265,6 +265,40 @@ def extract_sections(html: str) -> dict:
 
 
 # ---------------------------------------------------------------- fetch (snapshot + live)
+# A requirement line starts with the THING being required. A condition starts with the
+# circumstance under which it applies. That is the whole rule, and it is lexical rather than
+# semantic — the head-noun list is the one already validated for the conjoined-document split in
+# tools/crawler/fetch_service_directory.py, extended with the identity nouns this source uses.
+_DOC_START = re.compile(
+    r"^\s*(?:صور[ةه]|وثيق[ةه]|بيان|شهاد[ةه]|[إا]فاد[ةه]|محضر|تقرير|طلب|نسخ[ةه]|[إا]قام[ةه]"
+    r"|هوي[ةه]|جواز|[إا]خراج\s+قيد|مستند|بطاق[ةه]|رخص[ةه]|سند|وكال[ةه]"
+    r"|the\s|a\s|an\s|copy|application|photo|certificate|passport|permit)", re.I)
+
+
+def split_documents_and_conditions(lines: list[str] | None) -> tuple[list[str], list[str]]:
+    """Separate the papers a citizen collects from the conditions governing them.
+
+    WHY. General Security's Arabic page puts both in one <ul>: «طلب جواز سفر…» (a document) sits
+    beside «لا يُمنح القاصر دون الثامنة عشرة من العمر جواز سفر إلا بعد حيازته على موافقة الوالدين»
+    (a rule). Measured on /ar/posts/11: 3 of 13 lines are documents and 10 are conditions. Listing
+    all 13 as "required documents" asks the citizen to go and collect a sentence, and it is why
+    every one of them reported that its source was unknown — a condition HAS no issuing office.
+
+    Conditions are NEVER discarded. They carry things that change what a citizen must do — parental
+    consent for a minor, the three-month validity of a travel permit — and dropping them would be
+    the silent truncation this project treats as its worst failure (PROGRESS 2026-07-27). They are
+    returned separately so the answer can show them as conditions instead of as papers.
+    """
+    documents: list[str] = []
+    conditions: list[str] = []
+    for line in lines or []:
+        text = (line or "").strip()
+        if not text:
+            continue
+        (documents if _DOC_START.match(text) else conditions).append(text)
+    return documents, conditions
+
+
 def _snapshot_path(key: str, language: str) -> Path:
     return SNAPSHOT_DIR / f"{key}.{language}.html"
 
@@ -322,6 +356,8 @@ def external_lookup(query: str, language: str = "ar", allow_live: bool = True) -
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     fetched_at = now if served_from == "live" else (captured_at or "")
 
+    documents, conditions = split_documents_and_conditions(sections["required_documents"])
+
     return {
         "post_id": None,                     # not a Dawlati post — keeps check_freshness away
         "type": "external_gov_site",
@@ -329,8 +365,10 @@ def external_lookup(query: str, language: str = "ar", allow_live: bool = True) -
         "title_ar": entry["title_ar"],
         "title_en": entry["title_en"],
         "raw_text": sections["raw_text"],
+        # Conditions travel beside the record so compose can put them in the answer as conditions.
+        "conditions": conditions,
         "sections": {
-            "required_documents": sections["required_documents"],
+            "required_documents": documents or None,
             "fees": sections["fees"],
             "processing_time": None,
             "where_to_apply": WHERE_EN if language == "en" else WHERE_AR,

@@ -209,6 +209,11 @@ class Candidate(BaseModel):
 class AnswerOut(BaseModel):
     service: ServiceOut
     required_documents: list[ResolvedDocument] = Field(default_factory=list)
+    # Rules the source publishes alongside the documents — parental consent for a minor, how long a
+    # proxy stays valid. They are requirements the citizen must satisfy but not things they can go
+    # and collect, so they are NOT documents: listing them as such asks where to obtain a sentence.
+    # Defaults to empty, so every envelope written before this field existed still validates.
+    conditions: list[str] = Field(default_factory=list)
     time_estimate: TimeEstimate
     caveats: list[str] = Field(default_factory=list)
     conditional_flags: list[ConditionalFlag] = Field(default_factory=list)

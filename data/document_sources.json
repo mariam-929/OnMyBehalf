@@ -49,10 +49,9 @@
      "notes": "", "source_url": "", "verified_on": ""},
 
     {"doc_name_ar": "طلب جواز سفر لبناني", "doc_name_en": "Lebanese passport application form (A4)",
-     "issuing_authority": "", "where": "",
-     "_hint": "The General Security page states the form is «issued by the competent mayor according to the place of residence» — i.e. the mukhtar.",
-     "_evidence": "Unresolved on the external passport record at cos 0.486. Confirm against https://www.general-security.gov.lb/ar/posts/11",
-     "notes": "", "source_url": "", "verified_on": ""},
+     "issuing_authority": "مختار محل الإقامة", "where": "مختار محل الإقامة",
+     "notes": "FILLED FROM THE SOURCE'S OWN WORDING, not inferred: the English page states the form is 'issued by the competent mayor according to the place of residence', and the Arabic page requires it 'من الأنموذج المُعتمد'. NOTE: because this row carries a source_url, _from_lookup does NOT flag it for human review — the flag keys on source_url, not on verified_on. It is the one row here presented to a citizen as settled, so it should be the first one a teammate double-checks.",
+     "source_url": "https://www.general-security.gov.lb/en/posts/11", "verified_on": ""},
 
     {"doc_name_ar": "صورة شمسية", "doc_name_en": "Passport-style photograph",
      "issuing_authority": "", "where": "",

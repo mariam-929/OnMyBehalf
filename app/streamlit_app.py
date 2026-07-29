@@ -1181,6 +1181,18 @@ def render_answer(env: dict) -> None:
             st.caption("The source does not state where to obtain this one."
                        if english else "المصدر لا يذكر من أين تحصل عليها.")
 
+    # Conditions, not papers. Shown after the checklist because they qualify it, and shown at all
+    # because they carry things that change what the citizen must do — parental consent for a
+    # minor, how long a proxy stays valid. Before the split these were listed as documents, which
+    # is why every one of them reported an unknown source: a rule has no issuing office.
+    conditions = out.get("conditions") or []
+    if conditions:
+        st.markdown("---")
+        st.markdown("**Conditions the source attaches**" if english
+                    else "**شروط يذكرها المصدر**")
+        for condition in conditions:
+            render_value(condition, size="0.96rem", weight="500")
+
 
 def render_itinerary(out: dict) -> None:
     """Group the offices the citizen must visit into as few journeys as possible.
