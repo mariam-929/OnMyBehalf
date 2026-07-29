@@ -16,6 +16,26 @@ from __future__ import annotations
 from agents.nodes.trace import with_trace
 
 
+def _call_entry(record: dict) -> dict:
+    """Report the external fetch as a TOOL CALL, not just a node field.
+
+    It is an HTTP GET to another government host, so it belongs in the trace's tool list beside
+    the two Dawlati REST calls. Without this the passport answer displayed ONE external call:
+    `check_freshness` is skipped for external records (no Dawlati post_id to ask about), leaving
+    only `live_service_lookup` — so the screen under-reported what the run actually did.
+
+    `served_from` is carried from the record, so the entry says truthfully whether these bytes came
+    off the live site during this answer or out of the committed snapshot.
+    """
+    n_docs = len((record.get("sections") or {}).get("required_documents") or [])
+    served = record.get("served_from", "snapshot")
+    return {
+        "tool": "external_source_lookup",
+        "arg": record.get("url"),
+        "result": f"{served}: {n_docs} document(s) from {record.get('source_domain')}",
+    }
+
+
 def external_lookup_node(state: dict, external_fn=None) -> dict:
     """Try the curated external sources. Sets `service_record` on a hit, changes nothing on a miss.
 
@@ -45,7 +65,8 @@ def external_lookup_node(state: dict, external_fn=None) -> dict:
                            "external_source_used": True},
                           mode="already_resolved", hit=True,
                           source_domain=record.get("source_domain"),
-                          served_from=record.get("served_from"))
+                          served_from=record.get("served_from"),
+                          calls=[_call_entry(record)])
 
     query = state.get("query", "") or ""
     language = state.get("language", "ar")
@@ -73,6 +94,7 @@ def external_lookup_node(state: dict, external_fn=None) -> dict:
         source_url=record.get("url"),
         served_from=record.get("served_from"),
         n_documents=n_docs,
+        calls=[_call_entry(record)],
     )
 
 

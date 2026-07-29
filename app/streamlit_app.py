@@ -428,7 +428,12 @@ _TOOL_META = {
     "resolve_document": ("LOCAL", "Resolve document origin", False),
     "check_freshness": ("LIVE HTTP", "Check Dawlati page freshness", True),
     "live_service_lookup": ("LIVE HTTP", "Look up service on Dawlati", True),
+    "external_source_lookup": ("LIVE HTTP", "Fetch procedure from the issuing authority", True),
 }
+# Kept in one place so the counter and the per-call badge cannot disagree about what "external"
+# means — they did: the badge classified from _TOOL_META while the counter used its own literal
+# set, so the passport answer showed a 🌐 LIVE HTTP badge on a call the summary refused to count.
+_EXTERNAL_TOOLS = {tool for tool, (_, _, is_ext) in _TOOL_META.items() if is_ext}
 
 
 # ---------------------------------------------------------------------------
@@ -1373,7 +1378,7 @@ def render_trace(state: dict, elapsed: float, *, current: bool = False) -> None:
     external_calls = sum(
         1
         for _, call in calls
-        if str(call.get("tool") or "") in {"check_freshness", "live_service_lookup"}
+        if str(call.get("tool") or "") in _EXTERNAL_TOOLS
     )
     local_calls = sum(1 for _, call in calls if str(call.get("tool") or "") == "resolve_document")
 
