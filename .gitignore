@@ -19,7 +19,10 @@ data/catalog.json
 data/review_queue.jsonl
 logs/
 *.log
-report/evidence/demo_cache/
+# report/ and docs/ are not part of the shipped repo; some scripts (check_g6,
+# report_to_docx) still write there, so keep the output out of git.
+report/
+docs/
 
 # ---- python ----
 .venv/
