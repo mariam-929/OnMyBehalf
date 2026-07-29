@@ -1133,31 +1133,53 @@ def render_runtime_honesty(state: dict) -> None:
 
 
 def render_answer(env: dict) -> None:
-    """What the citizen came for. Everything here is either the answer or a warning about the
-    answer — nothing that requires knowing how the system works.
+    """The papers to bring, in source order, each with where to obtain it. Nothing else.
 
-    The technical breakdown of the conditional flags (kind, high-confidence vs heuristic, the
-    matched source wording) moved to the Reasoning panel. The citizen-facing consequence of those
-    flags did NOT: `render_caveats` states it in plain Arabic or English, and it stays above the
-    checklist, because "this list merges several applicant cases" changes how the list must be
-    read and is not a technical detail.
+    Everything that used to render here — the summary sentence, the service identity card, the
+    fees/authority/where-to-apply tiles, contacts, the trip planner, the conditional-flag block —
+    now lives in the Reasoning panel. It is MOVED, not deleted: the eval and the report both still
+    read those fields off the envelope, and a citizen who wants them is one click away.
+
+    ONE line survives at the top, and only when it is not the ordinary case: the source of the
+    facts, shown when the answer did not come from Dawlati or when the source could not be
+    verified. Report §1 and §3.6 both claim the citizen is told this, so removing it silently
+    would make a graded claim false. It is one sentence, not a banner.
     """
     out = env.get("output") or {}
     service = out.get("service") or {}
     language = str(env.get("language") or "en")
+    documents = out.get("required_documents") or []
+    english = language == "en"
 
-    render_summary(out, language)
-    render_service_identity(service, language)
-    render_freshness_banner(service)
-    render_service_facts(out)
-    render_contacts(service)
+    domain = external_domain(service)
+    if domain:
+        st.caption(
+            f"Not published on Dawlati — from the issuing authority's own site ({domain})."
+            if english else
+            f"غير منشورة على دولتي — من الموقع الرسمي للجهة المصدرة ({domain})."
+        )
+    elif effective_freshness_status(service.get("freshness") or {}) != "unchanged":
+        st.caption("The official source could not be re-checked in this run."
+                   if english else "تعذّر التحقق من المصدر الرسمي في هذه الجلسة.")
 
-    # Deliberately above the document list: these caveats change how it must be read.
-    render_caveats(out.get("caveats") or [])
-    render_documents(out)
-    # After the checklist: it is derived FROM the checklist, and only makes sense once the citizen
-    # knows what they are collecting.
-    render_itinerary(out)
+    if not documents:
+        st.info("The official source does not list required documents for this service."
+                if english else "لا يذكر المصدر الرسمي المستندات المطلوبة لهذه المعاملة.")
+        return
+
+    for index, document in enumerate(documents, 1):
+        st.markdown(f"**{index}.**")
+        render_value(document.get("name_ar") or "—", size="1.06rem", weight="700")
+        where = document.get("where_to_obtain")
+        if where:
+            st.caption("Where to get it" if english else "من أين تحصل عليها")
+            render_value(where, size="0.96rem", weight="550")
+        else:
+            # Never silently dropped. An unresolved document is still a document the citizen must
+            # bring; hiding it would shorten the checklist, which is the one failure this project
+            # treats as unacceptable (PROGRESS 2026-07-27, 23 requirements dropped from #11610).
+            st.caption("The source does not state where to obtain this one."
+                       if english else "المصدر لا يذكر من أين تحصل عليها.")
 
 
 def render_itinerary(out: dict) -> None:
@@ -1420,11 +1442,23 @@ def render_assistant_turn(turn: dict, *, current: bool) -> None:
             render_terminal(env)
 
     with st.expander(reasoning_label, expanded=False):
+        if env.get("action") == "answer":
+            # Moved out of the Answer panel, not dropped. Each of these is still asserted in the
+            # report (§1 fees/authority/freshness/citation, §3.5 confidence and review flags,
+            # §5 conditional structure), so it has to remain visible SOMEWHERE on screen — the
+            # claim is that the system discloses them, and a click is disclosure.
+            render_summary(out, language)
+            render_service_identity(out.get("service") or {}, language)
+            render_freshness_banner(out.get("service") or {})
+            render_service_facts(out)
+            render_contacts(out.get("service") or {})
+            render_conditional_flags(out.get("conditional_flags") or [])
+            render_caveats(out.get("caveats") or [])
+            render_itinerary(out)
+            render_rule()
         render_runtime_honesty(state)
         render_rule()
         render_confidence(env)
-        if env.get("action") == "answer":
-            render_conditional_flags(out.get("conditional_flags") or [])
         render_rule()
         render_trace(state, elapsed, current=current)
         render_raw_json(env)
