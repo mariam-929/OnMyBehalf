@@ -58,8 +58,15 @@ def _from_lookup(name_ar: str) -> ResolvedDocument | None:
         return None
     for row in _load_lookup():
         key = normalize_ar(row.get("doc_name_ar"))
-        if key and (key in n or n in key):
-            return ResolvedDocument(
+        if not (key and (key in n or n in key)):
+            continue
+        # An UNFILLED row is not a resolution. `data/document_sources.json` is a scaffold whose
+        # `where` values are written by a human (G3), and a row still awaiting that would otherwise
+        # return resolution="lookup_table" with an empty where_to_obtain — an answer claiming to
+        # know where a document comes from while showing the citizen nothing. Skip to the corpus.
+        if not (row.get("where") or row.get("issuing_authority")):
+            continue
+        return ResolvedDocument(
                 name_ar=name_ar,
                 name_en=row.get("doc_name_en") or None,
                 resolution="lookup_table",

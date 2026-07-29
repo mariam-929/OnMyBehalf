@@ -1,0 +1,69 @@
+{
+  "_comment": "Lookup table (SCOPE FR4 / G3). SCAFFOLD generated 2026-07-29 from the four demo queries. Every `where` value below is EMPTY on purpose — a human fills it. `_hint` is quoted from the requirement's own wording where the source names its own issuer; `_evidence` is why the row exists. Delete `_hint`/`_evidence` when signing a row, set `source_url` to the page you checked, and set `verified_on` to the date. A row with an empty source_url still resolves but is flagged needs_human_review, so an unsigned row is visible in the answer as unverified rather than silently trusted.",
+  "_how_to_fill": "For each row: open the official page, confirm where a citizen actually obtains that document, write it in `where` (the citizen-facing phrase, Arabic) and `issuing_authority` (the formal body). Put the URL you checked in `source_url` and today's date in `verified_on`. If you cannot confirm it, LEAVE IT EMPTY — an unresolved document is honest, a wrong office costs a citizen a day.",
+  "_not_included": "21 documents came back unresolved across the four demo queries; only the 9 below are documents. The other 12 are procedural RULES the extractor could not separate from requirements (e.g. «لا يُمنح القاصر دون الثامنة عشرة… إلا بعد موافقة الوالدين»). Do not add rows for those — they are not documents and a lookup row would put an office next to a sentence that is not a thing you can collect. See report §6.3 failure mode 3.",
+  "rows": [
+    {"doc_name_ar": "إخراج قيد إفرادي", "doc_name_en": "Individual civil status extract",
+     "issuing_authority": "دائرة الأحوال الشخصية / المختار", "where": "Personal Status Dept or mukhtar",
+     "notes": "carried over from the seed — still needs a source_url and a date",
+     "source_url": "", "verified_on": ""},
+
+    {"doc_name_ar": "إخراج قيد عائلي", "doc_name_en": "Family civil status extract",
+     "issuing_authority": "دائرة الأحوال الشخصية", "where": "Personal Status Dept",
+     "notes": "carried over from the seed — still needs a source_url and a date",
+     "source_url": "", "verified_on": ""},
+
+    {"doc_name_ar": "سجل عدلي", "doc_name_en": "Criminal record extract",
+     "issuing_authority": "وزارة العدل", "where": "Ministry of Justice",
+     "notes": "carried over from the seed — still needs a source_url and a date",
+     "source_url": "", "verified_on": ""},
+
+    {"doc_name_ar": "شهادة الولادة الصادرة عن المستشفى", "doc_name_en": "Hospital birth certificate",
+     "issuing_authority": "", "where": "",
+     "_hint": "The requirement names its own issuer: «شهادة الولادة الصادرة عن المستشفى أو الطبيب».",
+     "_evidence": "Unresolved in «كيف بسجل ولادة طفلي؟». Nearest corpus match is تسجيل ولادة at cos 0.661 — the SERVICE that consumes this document, not where it is issued. Similarity can never resolve this one: it is not a government service at all.",
+     "notes": "", "source_url": "", "verified_on": ""},
+
+    {"doc_name_ar": "محضر فقدان بطاقة الهوية", "doc_name_en": "Police report for a lost ID card",
+     "issuing_authority": "", "where": "",
+     "_hint": "The requirement names its own certifier: «محضر فقدان بطاقة الهويه الأصلي مصدق من النيابة العامة».",
+     "_evidence": "Unresolved in «شو الأوراق المطلوبة لتجديد بطاقة الهوية؟». Nearest match بطاقة هوية at cos 0.614 — the service being applied for, not the issuer of the report.",
+     "notes": "", "source_url": "", "verified_on": ""},
+
+    {"doc_name_ar": "بطاقة الهوية الأصلية", "doc_name_en": "Original ID card",
+     "issuing_authority": "", "where": "",
+     "_hint": "Held by the citizen already; `where` may legitimately be 'you already hold this'.",
+     "_evidence": "Unresolved in the ID-card query at cos 0.486. A row here mainly stops it reading as an unknown.",
+     "notes": "", "source_url": "", "verified_on": ""},
+
+    {"doc_name_ar": "موافقة الأمن العام", "doc_name_en": "General Security approval",
+     "issuing_authority": "", "where": "",
+     "_hint": "Names its own issuer: «موافقة المن العام إذا كانت الزوجة أجنبية». Note the source's own typo «المن» for «الأمن» — match on the corrected form.",
+     "_evidence": "Unresolved in «كيف يمكنني تسجيل زواجي في لبنان؟». This authority now has a curated external source (general-security.gov.lb, report §3.6), so source_url can point there.",
+     "notes": "", "source_url": "", "verified_on": ""},
+
+    {"doc_name_ar": "صورة عن جواز السفر", "doc_name_en": "Copy of passport",
+     "issuing_authority": "", "where": "",
+     "_hint": "The passport itself is issued by the General Directorate of General Security — see data/external/passport_biometric.ar.html and report §3.6.",
+     "_evidence": "Unresolved in the marriage query at cos 0.627 against تسجيل زواج — again the consuming service, not the issuer.",
+     "notes": "", "source_url": "", "verified_on": ""},
+
+    {"doc_name_ar": "طلب جواز سفر لبناني", "doc_name_en": "Lebanese passport application form (A4)",
+     "issuing_authority": "", "where": "",
+     "_hint": "The General Security page states the form is «issued by the competent mayor according to the place of residence» — i.e. the mukhtar.",
+     "_evidence": "Unresolved on the external passport record at cos 0.486. Confirm against https://www.general-security.gov.lb/ar/posts/11",
+     "notes": "", "source_url": "", "verified_on": ""},
+
+    {"doc_name_ar": "صورة شمسية", "doc_name_en": "Passport-style photograph",
+     "issuing_authority": "", "where": "",
+     "_hint": "Not a government-issued document. `where` is likely a photographer, with the mukhtar certifying it — both the ID-card and passport texts require mukhtar certification.",
+     "_evidence": "Unresolved on both the ID-card (cos 0.446) and passport records. Appears in most civil-registry services, so one row here fixes many answers.",
+     "notes": "", "source_url": "", "verified_on": ""},
+
+    {"doc_name_ar": "بيان قيد عائلي أو إفرادي", "doc_name_en": "Family or individual civil extract",
+     "issuing_authority": "", "where": "",
+     "_hint": "Same issuer as the two seed rows above — this is the disjunctive wording the resolver misses.",
+     "_evidence": "Unresolved in the birth query at cos 0.560 against #11548 «بيان قيد عائلي وإفرادي», which IS the corpus service for it. It failed only because the requirement is phrased «... أو ... أو بطاقات الهوية للوالدين», i.e. three alternatives in one line.",
+     "notes": "", "source_url": "", "verified_on": ""}
+  ]
+}
